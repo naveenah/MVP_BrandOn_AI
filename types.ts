@@ -14,20 +14,25 @@ export interface Tenant {
   status: 'Active' | 'Onboarding' | 'Inactive';
 }
 
-export interface BrandAsset {
+export interface OnboardingAsset {
   id: string;
-  name: string;
-  type: 'Logo' | 'ColorPalette' | 'Guideline' | 'SocialPost';
-  url: string;
-  createdAt: string;
+  fileName: string;
+  mimeType: string;
+  publicUrl: string;
+  status: 'Uploading' | 'Synced';
+  progress: number;
 }
 
-export interface OnboardingData {
+export interface OnboardingDraft {
   companyName: string;
   industry: string;
   brandVoice: string;
   mission: string;
-  step: number;
+  valueProps: string[];
+  services: string[];
+  assets: OnboardingAsset[];
+  currentStep: number;
+  updatedAt: string;
 }
 
 export enum AppRoute {
