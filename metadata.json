@@ -1,0 +1,8 @@
+{
+  "name": "Enterprise Brand SaaS",
+  "description": "An AI-driven multi-tenant brand automation platform for enterprise content management, onboarding, and strategic exploration.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
