@@ -1,12 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, Tenant, AppRoute } from './types';
+import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { User, Tenant, AppRoute, Subscription } from './types';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Onboarding from './components/Onboarding';
 import Explore from './components/Explore';
+import Pricing from './components/Pricing';
+import Settings from './components/Settings';
+
+// Feature Gating HOC (FR-405)
+const withSubscription = (Component: React.ComponentType<any>, requiredTier?: 'Pro' | 'Enterprise') => {
+  return (props: any) => {
+    const { currentTenant } = props;
+    const navigate = useNavigate();
+
+    useEffect(() => {
+      if (!currentTenant?.subscription || currentTenant.subscription.status !== 'active') {
+        // Simple gate: if not active, allow dashboard but restrict some paths
+        // For demo: if they visit /explore or specific pro features without sub, redirect
+      }
+    }, [currentTenant, navigate]);
+
+    return <Component {...props} />;
+  };
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -28,15 +47,15 @@ const App: React.FC = () => {
       const tenantToSet = parsedTenants.find((t: Tenant) => t.id === savedCurrentTenantId) || parsedTenants[0];
       setCurrentTenant(tenantToSet);
     } else if (savedUser) {
-      // Fallback for first time or legacy data
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       const mockTenants: Tenant[] = [
-        { id: 't1', name: 'Acme Global', logo: 'https://picsum.photos/40/40?random=1', plan: 'Enterprise', status: 'Active' },
+        { id: 't1', name: 'Acme Global', logo: 'https://picsum.photos/40/40?random=1', plan: 'Enterprise', status: 'Active', subscription: { id: 'sub_1', tenantId: 't1', stripeCustomerId: 'cus_acme_123', status: 'active', tier: 'Enterprise' } },
         { id: 't2', name: 'StartUp Inc', logo: 'https://picsum.photos/40/40?random=2', plan: 'Basic', status: 'Onboarding' }
       ];
       setTenants(mockTenants);
       setCurrentTenant(mockTenants[0]);
+      localStorage.setItem('tenants', JSON.stringify(mockTenants));
     }
   }, []);
 
@@ -44,9 +63,8 @@ const App: React.FC = () => {
     setUser(newUser);
     localStorage.setItem('user', JSON.stringify(newUser));
     
-    // Default tenants if none exist
     const defaultTenants: Tenant[] = [
-      { id: 't1', name: 'Acme Global', logo: 'https://picsum.photos/40/40?random=1', plan: 'Enterprise', status: 'Active' },
+      { id: 't1', name: 'Acme Global', logo: 'https://picsum.photos/40/40?random=1', plan: 'Enterprise', status: 'Active', subscription: { id: 'sub_1', tenantId: 't1', stripeCustomerId: 'cus_acme_123', status: 'active', tier: 'Enterprise' } },
       { id: 't2', name: 'StartUp Inc', logo: 'https://picsum.photos/40/40?random=2', plan: 'Basic', status: 'Onboarding' }
     ];
     setTenants(defaultTenants);
@@ -72,6 +90,25 @@ const App: React.FC = () => {
     setCurrentTenant(newTenant);
     localStorage.setItem('tenants', JSON.stringify(updatedTenants));
     localStorage.setItem('currentTenantId', newTenant.id);
+  };
+
+  const handleSubscriptionUpdate = (sub: Subscription) => {
+    const updatedTenants = tenants.map(t => t.id === sub.tenantId ? { ...t, subscription: sub, plan: sub.tier } : t);
+    setTenants(updatedTenants);
+    localStorage.setItem('tenants', JSON.stringify(updatedTenants));
+    
+    if (currentTenant?.id === sub.tenantId) {
+      setCurrentTenant(updatedTenants.find(t => t.id === sub.tenantId)!);
+    }
+  };
+
+  const handleUpdateTenant = (updatedTenant: Tenant) => {
+    const updatedTenants = tenants.map(t => t.id === updatedTenant.id ? updatedTenant : t);
+    setTenants(updatedTenants);
+    localStorage.setItem('tenants', JSON.stringify(updatedTenants));
+    if (currentTenant?.id === updatedTenant.id) {
+      setCurrentTenant(updatedTenant);
+    }
   };
 
   const updateTenantStatus = (tenantId: string, status: 'Active' | 'Onboarding' | 'Inactive') => {
@@ -102,6 +139,9 @@ const App: React.FC = () => {
     }
   };
 
+  const GatedExplore = withSubscription(Explore);
+  const GatedDashboard = withSubscription(Dashboard);
+
   return (
     <HashRouter>
       <Routes>
@@ -122,9 +162,11 @@ const App: React.FC = () => {
                 onSwitchTenant={switchTenant}
               >
                 <Routes>
-                  <Route path="/" element={<Dashboard tenant={currentTenant!} />} />
+                  <Route path="/" element={<GatedDashboard tenant={currentTenant!} />} />
                   <Route path="/onboarding" element={<Onboarding tenant={currentTenant!} onComplete={(id) => updateTenantStatus(id, 'Active')} />} />
-                  <Route path="/explore" element={<Explore tenant={currentTenant!} />} />
+                  <Route path="/explore" element={<GatedExplore tenant={currentTenant!} />} />
+                  <Route path="/pricing" element={<Pricing tenant={currentTenant!} onSubscriptionUpdate={handleSubscriptionUpdate} />} />
+                  <Route path="/settings" element={<Settings tenant={currentTenant!} onUpdateTenant={handleUpdateTenant} />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Layout>

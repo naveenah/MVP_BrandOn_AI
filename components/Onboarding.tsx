@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tenant, OnboardingDraft, OnboardingAsset } from '../types';
 import * as OnboardingService from '../services/onboardingService';
+import * as ActionEngineService from '../services/actionEngineService';
 
 interface OnboardingProps {
   tenant: Tenant;
@@ -119,17 +120,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       'Provisioning Isolated Database Context...',
       'Mapping Neural Vectors to Enterprise Assets...',
       'Finalizing API Handlers...',
-      'Activating Brand Intelligence Hub...'
+      'Activating Action Engine & Brand Hub...'
     ];
 
     let currentIdx = 0;
     setDeploymentStage(stages[0]);
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       currentIdx++;
       if (currentIdx >= stages.length) {
         clearInterval(interval);
+        
+        // Final completion logic
         onComplete(tenant.id);
+        
+        // Trigger the Action Engine Ripple (FR-501 to FR-504)
+        await ActionEngineService.triggerAutomationRipple(tenant.id);
+        
         navigate('/');
       } else {
         setDeploymentStage(stages[currentIdx]);

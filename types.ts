@@ -6,12 +6,47 @@ export interface User {
   avatar?: string;
 }
 
+export type SubscriptionTier = 'Basic' | 'Pro' | 'Enterprise';
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'trialing' | 'none' | 'incomplete';
+
+export interface Subscription {
+  id: string;
+  tenantId: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  status: SubscriptionStatus;
+  tier: SubscriptionTier;
+}
+
+export type ChannelType = 'LinkedIn' | 'X' | 'Google Business' | 'YouTube' | 'Medium' | 'Shopify';
+export type AutomationStatus = 'Pending' | 'Active' | 'Generating' | 'Failed';
+
+export interface AutomationChannel {
+  type: ChannelType;
+  status: AutomationStatus;
+  lastAction?: string;
+}
+
+export interface ScheduledPost {
+  id: string;
+  platform: ChannelType;
+  title: string;
+  publishAt: string;
+  status: 'Scheduled' | 'Published' | 'Draft';
+  contentSummary: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
   logo: string;
-  plan: 'Basic' | 'Enterprise';
+  plan: SubscriptionTier;
   status: 'Active' | 'Onboarding' | 'Inactive';
+  subscription?: Subscription;
+  automationWorkflow?: {
+    channels: AutomationChannel[];
+    overallProgress: number;
+  };
 }
 
 export interface OnboardingAsset {
@@ -40,5 +75,6 @@ export enum AppRoute {
   DASHBOARD = '/',
   ONBOARDING = '/onboarding',
   EXPLORE = '/explore',
-  SETTINGS = '/settings'
+  SETTINGS = '/settings',
+  PRICING = '/pricing'
 }
