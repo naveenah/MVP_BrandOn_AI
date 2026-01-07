@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { User, Tenant, AppRoute } from '../types';
 import TenantSwitcher from './TenantSwitcher';
+import { getInfraStatus } from '../services/apiClient';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,12 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, user, currentTenant, tenants, onLogout, onSwitchTenant }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [infra, setInfra] = useState(getInfraStatus());
+
+  useEffect(() => {
+    const interval = setInterval(() => setInfra(getInfraStatus()), 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navigation = [
     { name: 'Dashboard', href: AppRoute.DASHBOARD, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -59,6 +66,19 @@ const Layout: React.FC<LayoutProps> = ({ children, user, currentTenant, tenants,
               })}
             </nav>
             
+            <div className="p-4 border-t border-slate-800 bg-slate-950/50">
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Gateway</span>
+                    <span className="text-xs font-bold text-emerald-400">HEALTHY</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Quota</span>
+                    <span className="text-xs font-bold text-slate-300">{infra.rateLimit}</span>
+                  </div>
+               </div>
+            </div>
+
             <div className="p-4 border-t border-slate-800">
               <TenantSwitcher 
                 currentTenant={currentTenant} 

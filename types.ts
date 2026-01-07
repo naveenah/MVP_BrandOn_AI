@@ -70,6 +70,14 @@ export interface OnboardingDraft {
   updatedAt: string;
 }
 
+export interface InfraStatus {
+  gateway: 'Healthy' | 'Degraded' | 'Down';
+  rateLimitRemaining: number;
+  apiVersion: string;
+  encryption: 'AES-256' | 'None';
+  isolationMode: 'Row-Level Security' | 'Schema-Level';
+}
+
 export enum AppRoute {
   LOGIN = '/login',
   DASHBOARD = '/',
