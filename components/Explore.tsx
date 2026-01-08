@@ -12,7 +12,6 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [showSources, setShowSources] = useState<Citation[] | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,7 +23,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
       })) as Message[];
       
       if (formatted.length === 0) {
-        setMessages([{ role: 'model', content: `Welcome back. I am synced with the **${tenant.name}** context. How can I assist?` }]);
+        setMessages([{ role: 'model', content: `Identity Verified. I am grounded in the **${tenant.name}** Enterprise Knowledge Base. Ask me anything about your brand strategy or presence.` }]);
       } else {
         setMessages(formatted);
       }
@@ -55,7 +54,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
 
   const handleClear = async () => {
     await GeminiService.clearChatHistory(tenant.id);
-    setMessages([{ role: 'model', content: "Memory cleared. How can I help?" }]);
+    setMessages([{ role: 'model', content: "Context reset. Enterprise Knowledge Base re-indexed. How can I assist?" }]);
   };
 
   return (
@@ -67,11 +66,17 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
             <div>
-              <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none">Persistent Explore</h2>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 block">Contextual AI Agent</span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none">Enterprise Intelligence</h2>
+                <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">RAG Active</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 block">Grounded in Onboarding context</span>
             </div>
           </div>
-          <button onClick={handleClear} className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors">Clear History</button>
+          <button onClick={handleClear} className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors">Reset Store</button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-10 bg-[#fcfcfd] no-scrollbar">
@@ -82,9 +87,24 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
                   m.role === 'user' ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-800'
                 }`}>
                   <p className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{m.content}</p>
-                  {m.citations && m.citations.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <button onClick={() => setShowSources(m.citations || null)} className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg">View {m.citations.length} Sources</button>
+                  
+                  {m.role === 'model' && m.citations && m.citations.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Web Grounding References</p>
+                      <div className="flex flex-wrap gap-2">
+                        {m.citations.map((cit, idx) => (
+                          <a 
+                            key={idx} 
+                            href={cit.uri} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                          >
+                            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            {cit.title}
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -95,7 +115,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm flex items-center gap-3">
                 <div className="flex gap-1.5"><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></div><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></div></div>
-                <span className="text-xs font-bold text-slate-400 italic">Consulting Neon DB...</span>
+                <span className="text-xs font-bold text-slate-400 italic">Querying RAG Knowledge Base...</span>
               </div>
             </div>
           )}
@@ -106,7 +126,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
             <div className="relative flex items-center gap-4 bg-white p-3 rounded-[2rem] border border-slate-200 shadow-2xl">
               <input 
                 type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about your brand mission..." className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] text-slate-900 font-semibold px-6 py-4"
+                placeholder="Ask your Brand Intelligence Agent..." className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] text-slate-900 font-semibold px-6 py-4"
               />
               <button 
                 onClick={handleSend} disabled={!input.trim() || isThinking}

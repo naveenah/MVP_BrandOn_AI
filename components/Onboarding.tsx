@@ -10,6 +10,28 @@ interface OnboardingProps {
   onComplete: (tenantId: string) => void;
 }
 
+const ORG_SIZES = [
+  '0-1 employees',
+  '2-10 employees',
+  '11-50 employees',
+  '51-200 employees',
+  '201-500 employees',
+  '501-1,000 employees',
+  '1,001-5,000 employees',
+  '5,001-10,000 employees',
+  '10,001+ employees'
+];
+
+const ORG_TYPES = [
+  'Public company',
+  'Self-employed',
+  'Government agency',
+  'Non-profit',
+  'Sole proprietorship',
+  'Privately held',
+  'Partnership'
+];
+
 const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +43,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   
   const [formData, setFormData] = useState<OnboardingDraft>({
     companyName: tenant.name,
+    linkedinUrl: '',
+    website: '',
     industry: '',
+    orgSize: '',
+    orgType: '',
+    tagline: '',
+    isAuthorized: false,
     brandVoice: 'Professional',
     mission: '',
     valueProps: [''],
@@ -35,7 +63,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     const loadDraft = async () => {
       const savedDraft = await OnboardingService.getOnboardingDraft(tenant.id);
       if (savedDraft) {
-        setFormData(savedDraft);
+        setFormData(prev => ({ ...prev, ...savedDraft }));
         setStep(savedDraft.currentStep);
       }
       setIsLoadingDraft(false);
@@ -115,10 +143,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   };
 
   const handleFinalize = () => {
+    if (!formData.isAuthorized) {
+      alert("Please verify that you are an authorized representative.");
+      return;
+    }
     setIsDeploying(true);
     const stages = [
       'Provisioning Isolated Database Context...',
       'Mapping Neural Vectors to Enterprise Assets...',
+      'Syncing to Google File Search RAG Store...',
       'Finalizing API Handlers...',
       'Activating Action Engine & Brand Hub...'
     ];
@@ -130,13 +163,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       currentIdx++;
       if (currentIdx >= stages.length) {
         clearInterval(interval);
-        
-        // Final completion logic
         onComplete(tenant.id);
-        
-        // Trigger the Action Engine Ripple (FR-501 to FR-504)
         await ActionEngineService.triggerAutomationRipple(tenant.id);
-        
         navigate('/');
       } else {
         setDeploymentStage(stages[currentIdx]);
@@ -156,9 +184,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   }
 
   const steps = [
-    { title: 'Core Identity', desc: 'Strategic basics' },
-    { title: 'Value Map', desc: 'Propositions & Services' },
-    { title: 'Media Hub', desc: 'Sync multi-modal assets' }
+    { title: 'Brand Identity', desc: 'Core presence' },
+    { title: 'Strategic Map', desc: 'Value & Mission' },
+    { title: 'Asset Hub', desc: 'Media sync' }
   ];
 
   return (
@@ -192,7 +220,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
         </button>
       </div>
 
-      {/* Modern Progress Line */}
       <div className="flex items-center gap-4 mb-12 overflow-x-auto pb-4 no-scrollbar">
         {steps.map((s, i) => (
           <React.Fragment key={i}>
@@ -201,11 +228,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                 step > i + 1 ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-100' : 
                 step === i + 1 ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-200 ring-8 ring-indigo-50' : 'bg-white border-2 border-slate-200 text-slate-400'
               }`}>
-                {step > i + 1 ? (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                ) : (i + 1)}
+                {step > i + 1 ? <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg> : (i + 1)}
               </div>
-              <div className="hidden sm:block">
+              <div className="hidden sm:block text-left">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Step 0{i + 1}</p>
                 <p className={`text-[16px] font-black ${step === i + 1 ? 'text-slate-900' : 'text-slate-500'}`}>{s.title}</p>
               </div>
@@ -218,57 +243,160 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
         <div className="p-10 sm:p-14">
           {step === 1 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
-              <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Foundational Context</h2>
-                <p className="text-slate-500 font-medium mt-2">Establish the primary metadata for your brand agent.</p>
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
+              <div className="border-b border-slate-100 pb-6 mb-6">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Ecosystem Presence</h2>
+                <p className="text-slate-500 font-medium mt-2">Map your existing footprint to train the brand engine.</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Enterprise Designation</label>
+
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">Add your organization's name*</label>
                   <input 
                     type="text" 
                     value={formData.companyName} 
                     onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                    className="w-full px-7 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-600 transition-all outline-none text-slate-900 font-bold" 
+                    placeholder="Acme Corporation"
+                    className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900" 
                   />
                 </div>
-                <div className="space-y-4">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Industry Classification</label>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">linkedin.com/company/*</label>
+                  <input 
+                    type="text" 
+                    value={formData.linkedinUrl} 
+                    onChange={(e) => setFormData({...formData, linkedinUrl: e.target.value})}
+                    placeholder="Add your unique LinkedIn address"
+                    className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900" 
+                  />
+                  <p className="text-xs font-bold text-indigo-600 mt-1 cursor-pointer hover:underline">Learn more about the Page Public URL</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">Website</label>
+                  <input 
+                    type="text" 
+                    value={formData.website} 
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    placeholder="Begin with http://, https:// or www."
+                    className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700">Industry*</label>
+                    <input 
+                      type="text" 
+                      value={formData.industry} 
+                      onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                      placeholder="ex: Information Services"
+                      className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700">Organization size*</label>
+                    <select 
+                      value={formData.orgSize}
+                      onChange={(e) => setFormData({...formData, orgSize: e.target.value})}
+                      className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900"
+                    >
+                      <option value="">Select size</option>
+                      {ORG_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">Organization type*</label>
                   <select 
-                    value={formData.industry}
-                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
-                    className="w-full px-7 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-600 outline-none transition-all text-slate-900 font-bold"
+                    value={formData.orgType}
+                    onChange={(e) => setFormData({...formData, orgType: e.target.value})}
+                    className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900"
                   >
-                    <option value="">Select Domain</option>
-                    <option value="saas">SaaS & Enterprise Tech</option>
-                    <option value="fintech">FinTech & Crypto</option>
-                    <option value="healthcare">Healthcare Systems</option>
-                    <option value="retail">Global D2C Retail</option>
+                    <option value="">Select type</option>
+                    {ORG_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-              </div>
-              <div className="space-y-4">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Strategic Mission</label>
-                <textarea 
-                  rows={4}
-                  value={formData.mission}
-                  onChange={(e) => setFormData({...formData, mission: e.target.value})}
-                  placeholder="The primary objective your brand serves..."
-                  className="w-full px-7 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:ring-4 focus:ring-indigo-100 focus:bg-white focus:border-indigo-600 transition-all outline-none text-slate-900 font-medium"
-                ></textarea>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">Logo</label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-300 rounded-lg p-10 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-600 hover:bg-slate-50 transition-all bg-white"
+                  >
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+                    {formData.assets.find(a => a.mimeType.startsWith('image')) ? (
+                      <div className="flex flex-col items-center">
+                        <svg className="w-10 h-10 text-emerald-500 mb-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                        <span className="text-xs font-bold text-slate-600">Logo Uploaded</span>
+                      </div>
+                    ) : (
+                      <>
+                        <svg className="w-10 h-10 text-slate-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4v12" /></svg>
+                        <span className="text-base font-bold text-slate-700">Choose file</span>
+                        <span className="text-xs text-slate-500 mt-1">Upload to see preview</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">300 x 300px recommended. JPGs, JPEGs, and PNGs supported.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-700">Tagline</label>
+                  <textarea 
+                    rows={3}
+                    maxLength={120}
+                    value={formData.tagline}
+                    onChange={(e) => setFormData({...formData, tagline: e.target.value})}
+                    placeholder="ex: An information services firm helping small businesses succeed."
+                    className="w-full px-5 py-3.5 bg-white border border-slate-300 rounded focus:border-indigo-600 outline-none text-slate-900"
+                  ></textarea>
+                  <div className="flex justify-between mt-1">
+                    <p className="text-[10px] font-medium text-slate-500">Use your tagline to briefly describe what your organization does. This can be changed later.</p>
+                    <p className="text-[10px] font-medium text-slate-500">{formData.tagline.length}/120</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 pt-6">
+                  <input 
+                    type="checkbox" 
+                    id="auth"
+                    checked={formData.isAuthorized}
+                    onChange={(e) => setFormData({...formData, isAuthorized: e.target.checked})}
+                    className="w-5 h-5 mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                  />
+                  <label htmlFor="auth" className="text-sm text-slate-600 font-medium leading-relaxed">
+                    I verify that I am an authorized representative of this organization and have the right to act on its behalf in the creation and management of this page. The organization and I agree to the additional terms for Pages.
+                  </label>
+                </div>
+                <p className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer pl-8">Read the LinkedIn Pages Terms</p>
               </div>
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Strategic Content Map</h2>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Strategy Alignment</h2>
                 <p className="text-slate-500 font-medium mt-2">Define your value propositions and core service offerings.</p>
               </div>
               
               <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Strategic Mission</label>
+                  </div>
+                  <textarea 
+                    rows={4}
+                    value={formData.mission}
+                    onChange={(e) => setFormData({...formData, mission: e.target.value})}
+                    placeholder="Describe the ultimate impact your brand aims to achieve..."
+                    className="w-full px-7 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-indigo-600 outline-none text-slate-900"
+                  ></textarea>
+                </div>
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Unique Value Propositions</label>
@@ -288,7 +416,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Core Offerings / Services</label>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Core Services</label>
                     <button onClick={() => handleAddField('services')} className="text-xs font-black text-indigo-600 hover:text-indigo-700">+ Add Service</button>
                   </div>
                   {formData.services.map((service, idx) => (
@@ -307,10 +435,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
           )}
 
           {step === 3 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div className="text-center space-y-4">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Cloud Asset Hub</h2>
-                <p className="text-slate-500 font-medium max-w-lg mx-auto">Sync your visual identity assets. We support large-scale video and vector imaging via Google File Store.</p>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Advanced Media Hub</h2>
+                <p className="text-slate-500 font-medium max-w-lg mx-auto">Upload campaign reels, product demo videos, or high-fidelity brand guides to initialize the multi-modal agent.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -327,7 +455,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                 </div>
 
                 <div className="space-y-4 h-64 overflow-y-auto no-scrollbar pr-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-white pb-2">Active Syncs</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-white pb-2">Cloud Sync Queue</label>
                   {formData.assets.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-[2rem] border-2 border-slate-100 border-dashed">
                       <p className="text-slate-400 text-xs font-bold">No assets linked yet.</p>
@@ -336,24 +464,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                     formData.assets.map((asset) => (
                       <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 shadow-sm">
                         <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                           {asset.mimeType.startsWith('video') ? (
-                             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
-                           ) : (
-                             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" /></svg>
-                           )}
+                           {asset.mimeType.startsWith('video') ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg> : <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" /></svg>}
                         </div>
-                        <div className="flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-hidden text-left">
                           <p className="text-sm font-black text-slate-900 truncate mb-1">{asset.fileName}</p>
                           <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full bg-indigo-600 transition-all duration-300 ${asset.status === 'Synced' ? 'bg-emerald-500' : ''}`} 
-                              style={{ width: `${asset.progress}%` }}
-                            ></div>
+                            <div className={`h-full bg-indigo-600 transition-all duration-300 ${asset.status === 'Synced' ? 'bg-emerald-500' : ''}`} style={{ width: `${asset.progress}%` }}></div>
                           </div>
                         </div>
-                        {asset.status === 'Synced' && (
-                          <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                        )}
+                        {asset.status === 'Synced' && <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>}
                       </div>
                     ))
                   )}
@@ -374,14 +493,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
           
           <button 
             onClick={step === 3 ? handleFinalize : nextStep}
-            disabled={isDeploying || (step === 3 && formData.assets.filter(a => a.status === 'Synced').length === 0)}
+            disabled={isDeploying || (step === 3 && !formData.isAuthorized)}
             className={`px-14 py-5 rounded-[1.8rem] text-[16px] font-black shadow-2xl transition-all active:scale-95 disabled:opacity-50 tracking-tight ${
-              step === 3 
-                ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-300' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+              step === 3 ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-300' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
             }`}
           >
-            {step === 3 ? 'Deploy Brand Ecosystem' : 'Next Configuration'}
+            {step === 3 ? 'Initialize Deployment' : 'Save & Continue'}
           </button>
         </div>
       </div>

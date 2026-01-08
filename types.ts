@@ -60,7 +60,13 @@ export interface OnboardingAsset {
 
 export interface OnboardingDraft {
   companyName: string;
+  linkedinUrl: string;
+  website: string;
   industry: string;
+  orgSize: string;
+  orgType: string;
+  tagline: string;
+  isAuthorized: boolean;
   brandVoice: string;
   mission: string;
   valueProps: string[];
