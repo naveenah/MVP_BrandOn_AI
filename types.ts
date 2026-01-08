@@ -58,6 +58,18 @@ export interface OnboardingAsset {
   progress: number;
 }
 
+export interface ProductServiceDetail {
+  id: string;
+  name: string;
+  type: 'Product' | 'Service';
+  description: string;
+  targetAudience: string;
+  keyFeatures: string[];
+  pricingModel: string;
+  marketPosition: string;
+  status: 'Beta' | 'Live' | 'Sunset';
+}
+
 export interface OnboardingDraft {
   companyName: string;
   linkedinUrl: string;
@@ -70,7 +82,8 @@ export interface OnboardingDraft {
   brandVoice: string;
   mission: string;
   valueProps: string[];
-  services: string[];
+  services: string[]; // Legacy field
+  offerings: ProductServiceDetail[];
   assets: OnboardingAsset[];
   currentStep: number;
   updatedAt: string;

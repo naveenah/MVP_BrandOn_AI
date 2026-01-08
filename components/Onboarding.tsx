@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tenant, OnboardingDraft, OnboardingAsset } from '../types';
+import { Tenant, OnboardingDraft, OnboardingAsset, ProductServiceDetail } from '../types';
 import * as OnboardingService from '../services/onboardingService';
 import * as ActionEngineService from '../services/actionEngineService';
 
@@ -31,6 +31,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [deploymentStage, setDeploymentStage] = useState('');
   const [deploymentProgress, setDeploymentProgress] = useState(0);
+  const [activeOfferingId, setActiveOfferingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<OnboardingDraft>({
     companyName: tenant.name,
@@ -44,7 +45,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     brandVoice: 'Professional',
     mission: '',
     valueProps: [''],
-    services: [''],
+    services: [],
+    offerings: [],
     assets: [],
     currentStep: 1,
     updatedAt: new Date().toISOString()
@@ -68,6 +70,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       if (savedDraft) {
         setFormData(prev => ({ ...prev, ...savedDraft }));
         setStep(savedDraft.currentStep);
+        if (savedDraft.offerings && savedDraft.offerings.length > 0) {
+            setActiveOfferingId(savedDraft.offerings[0].id);
+        }
       }
       setIsLoadingDraft(false);
     };
@@ -87,7 +92,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       alert("Please fill in all required fields marked with *");
       return;
     }
-    const next = Math.min(step + 1, 3);
+    const next = Math.min(step + 1, 4);
     setStep(next);
     await saveCurrentProgress({}, next);
   };
@@ -103,15 +108,51 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     navigate('/');
   };
 
-  const handleAddField = (type: 'valueProps' | 'services') => {
+  const handleAddField = (type: 'valueProps') => {
     const updatedList = [...formData[type], ''];
     handleInputChange(type, updatedList);
   };
 
-  const handleFieldChange = (type: 'valueProps' | 'services', index: number, value: string) => {
+  const handleFieldChange = (type: 'valueProps', index: number, value: string) => {
     const updated = [...formData[type]];
     updated[index] = value;
     handleInputChange(type, updated);
+  };
+
+  // Offering Handlers
+  const handleAddOffering = () => {
+      const newOffering: ProductServiceDetail = {
+          id: `off-${Date.now()}`,
+          name: 'New Offering',
+          type: 'Product',
+          description: '',
+          targetAudience: '',
+          keyFeatures: [''],
+          pricingModel: '',
+          marketPosition: '',
+          status: 'Beta'
+      };
+      const updated = [...formData.offerings, newOffering];
+      handleInputChange('offerings', updated);
+      setActiveOfferingId(newOffering.id);
+  };
+
+  const handleUpdateOffering = (id: string, updates: Partial<ProductServiceDetail>) => {
+      const updated = formData.offerings.map(o => o.id === id ? { ...o, ...updates } : o);
+      handleInputChange('offerings', updated);
+  };
+
+  const handleDeleteOffering = (id: string) => {
+      const updated = formData.offerings.filter(o => o.id !== id);
+      handleInputChange('offerings', updated);
+      if (activeOfferingId === id) {
+          setActiveOfferingId(updated.length > 0 ? updated[0].id : null);
+      }
+  };
+
+  const handleDeleteAsset = (assetId: string) => {
+    const updatedAssets = formData.assets.filter(a => a.id !== assetId);
+    handleInputChange('assets', updatedAssets);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +190,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       console.error("Upload failed", err); 
     }
     
-    // Clear the input so same file can be selected again if needed
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -166,13 +206,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       'Provisioning Isolated Database Context...',
       'Mapping Neural Vectors to Enterprise Assets...',
       'Syncing to Google File Search RAG Store...',
+      'Analyzing Product/Service Portfolio...',
       'Finalizing API Handlers...',
       'Activating Action Engine & Brand Hub...'
     ];
 
     let currentIdx = 0;
     setDeploymentStage(stages[0]);
-    setDeploymentProgress(20);
+    setDeploymentProgress(16);
 
     const interval = setInterval(async () => {
       currentIdx++;
@@ -188,7 +229,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
         }, 800);
       } else {
         setDeploymentStage(stages[currentIdx]);
-        setDeploymentProgress((currentIdx + 1) * 20);
+        setDeploymentProgress((currentIdx + 1) * (100/stages.length));
       }
     }, 1200);
   };
@@ -205,14 +246,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   }
 
   const steps = [
-    { title: 'Brand Identity', desc: 'Core presence' },
-    { title: 'Strategic Map', desc: 'Value & Mission' },
-    { title: 'Asset Hub', desc: 'Media sync' }
+    { title: 'Identity', desc: 'Core' },
+    { title: 'Strategy', desc: 'Map' },
+    { title: 'Offerings', desc: 'Portfolio' },
+    { title: 'Asset Hub', desc: 'Media' }
   ];
 
+  const activeOffering = formData.offerings.find(o => o.id === activeOfferingId);
+
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 relative">
-      {/* Hidden File Input outside the clickable container to prevent bubbles */}
+    <div className="max-w-5xl mx-auto py-8 px-4 relative">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -283,7 +326,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       </div>
 
       <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-        <div className="p-10 sm:p-14">
+        <div className="p-10 sm:p-14 min-h-[600px]">
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div className="border-b border-slate-100 pb-6 mb-6">
@@ -360,6 +403,130 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
           )}
 
           {step === 3 && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left h-full flex flex-col">
+              <div className="border-b border-slate-100 pb-6">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Offerings Portfolio</h2>
+                <p className="text-slate-500 font-medium mt-2">Detail the specific products and services your brand provides to train AI depth.</p>
+              </div>
+              
+              <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-[400px]">
+                {/* List View */}
+                <div className="w-full md:w-64 flex flex-col gap-3">
+                   <div className="flex items-center justify-between mb-2">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Your Offerings</span>
+                     <button onClick={handleAddOffering} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                     </button>
+                   </div>
+                   <div className="space-y-2 max-h-[400px] overflow-y-auto no-scrollbar">
+                     {formData.offerings.length === 0 ? (
+                       <p className="text-xs text-slate-400 font-bold text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">No offerings added.</p>
+                     ) : (
+                       formData.offerings.map(off => (
+                         <button 
+                           key={off.id}
+                           onClick={() => setActiveOfferingId(off.id)}
+                           className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                             activeOfferingId === off.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-50 bg-white hover:border-slate-200'
+                           }`}
+                         >
+                           <div className="overflow-hidden">
+                             <p className={`text-xs font-black truncate ${activeOfferingId === off.id ? 'text-indigo-900' : 'text-slate-900'}`}>{off.name || 'Untitled'}</p>
+                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{off.type}</p>
+                           </div>
+                           <button onClick={(e) => { e.stopPropagation(); handleDeleteOffering(off.id); }} className="p-1 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all">
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           </button>
+                         </button>
+                       ))
+                     )}
+                   </div>
+                </div>
+
+                {/* Detail Form */}
+                <div className="flex-1 bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100 overflow-y-auto max-h-[500px] no-scrollbar">
+                   {activeOffering ? (
+                     <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Offering Name</label>
+                             <input type="text" value={activeOffering.name} onChange={(e) => handleUpdateOffering(activeOffering.id, { name: e.target.value })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
+                           </div>
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</label>
+                             <select value={activeOffering.type} onChange={(e) => handleUpdateOffering(activeOffering.id, { type: e.target.value as any })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900">
+                               <option value="Product">Product</option>
+                               <option value="Service">Service</option>
+                             </select>
+                           </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Description</label>
+                          <textarea rows={3} value={activeOffering.description} onChange={(e) => handleUpdateOffering(activeOffering.id, { description: e.target.value })} placeholder="Detailed explanation of what this offering does..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-medium text-slate-900" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Audience</label>
+                             <input type="text" value={activeOffering.targetAudience} onChange={(e) => handleUpdateOffering(activeOffering.id, { targetAudience: e.target.value })} placeholder="e.g. CTOs at mid-market firms" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
+                           </div>
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Model</label>
+                             <input type="text" value={activeOffering.pricingModel} onChange={(e) => handleUpdateOffering(activeOffering.id, { pricingModel: e.target.value })} placeholder="e.g. SaaS Subscription, One-time Fee" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Market Position</label>
+                             <input type="text" value={activeOffering.marketPosition} onChange={(e) => handleUpdateOffering(activeOffering.id, { marketPosition: e.target.value })} placeholder="e.g. Premium / Mid-Tier / Disruptor" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
+                           </div>
+                           <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lifecycle Status</label>
+                             <select value={activeOffering.status} onChange={(e) => handleUpdateOffering(activeOffering.id, { status: e.target.value as any })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900">
+                               <option value="Beta">Beta / R&D</option>
+                               <option value="Live">Live / Active</option>
+                               <option value="Sunset">Legacy / Sunset</option>
+                             </select>
+                           </div>
+                        </div>
+
+                        <div className="space-y-3">
+                           <div className="flex items-center justify-between">
+                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Features / Pillars</label>
+                             <button onClick={() => handleUpdateOffering(activeOffering.id, { keyFeatures: [...activeOffering.keyFeatures, ''] })} className="text-[10px] font-black text-indigo-600 hover:underline">+ Add Feature</button>
+                           </div>
+                           <div className="space-y-2">
+                             {activeOffering.keyFeatures.map((feat, idx) => (
+                               <input 
+                                 key={idx} 
+                                 type="text" 
+                                 value={feat} 
+                                 onChange={(e) => {
+                                   const updated = [...activeOffering.keyFeatures];
+                                   updated[idx] = e.target.value;
+                                   handleUpdateOffering(activeOffering.id, { keyFeatures: updated });
+                                 }}
+                                 placeholder={`Feature 0${idx + 1}`}
+                                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:border-indigo-600 outline-none text-xs font-bold" 
+                               />
+                             ))}
+                           </div>
+                        </div>
+                     </div>
+                   ) : (
+                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40 py-20">
+                        <svg className="w-16 h-16 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        <p className="text-sm font-black text-slate-900">Select an offering to configure its details.</p>
+                     </div>
+                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div className="text-center space-y-4">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">Advanced Media Hub</h2>
@@ -384,7 +551,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                     </div>
                   ) : (
                     formData.assets.map((asset) => (
-                      <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-right-4">
+                      <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-right-4 group">
                         <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
                           {asset.status === 'Synced' ? (
                             <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
@@ -398,6 +565,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                             <div className={`h-full transition-all duration-300 ${asset.status === 'Synced' ? 'bg-emerald-500' : 'bg-indigo-600'}`} style={{ width: `${asset.progress}%` }}></div>
                           </div>
                         </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset.id); }}
+                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          title="Remove Asset"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     ))
                   )}
@@ -410,13 +586,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
         <div className="p-10 bg-[#fafafa] border-t border-slate-100 flex items-center justify-between">
           <button onClick={prevStep} disabled={step === 1 || isDeploying} className="px-8 py-4 text-sm font-black text-slate-400 hover:text-slate-900 disabled:opacity-20 transition-all uppercase tracking-widest">Back</button>
           <button 
-            onClick={step === 3 ? handleFinalize : nextStep} 
-            disabled={isDeploying || (step === 3 && !formData.isAuthorized)} 
+            onClick={step === 4 ? handleFinalize : nextStep} 
+            disabled={isDeploying || (step === 4 && !formData.isAuthorized)} 
             className={`px-14 py-5 rounded-[1.8rem] text-[16px] font-black shadow-2xl transition-all active:scale-95 tracking-tight ${
-              step === 3 ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              step === 4 ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'
             }`}
           >
-            {step === 3 ? 'Initialize Deployment' : 'Save & Continue'}
+            {step === 4 ? 'Initialize Deployment' : 'Save & Continue'}
           </button>
         </div>
       </div>

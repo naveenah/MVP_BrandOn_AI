@@ -14,6 +14,16 @@ const buildEnterpriseContext = async (tenantId: string): Promise<string> => {
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
   if (!draft) return "No brand context available.";
 
+  const offeringsText = draft.offerings?.map((o, i) => `
+Offering #${i + 1}: ${o.name} (${o.type})
+- Status: ${o.status}
+- Market Position: ${o.marketPosition}
+- Target Audience: ${o.targetAudience}
+- Pricing Model: ${o.pricingModel}
+- Description: ${o.description}
+- Key Features: ${o.keyFeatures.join(', ')}
+`).join('\n') || "No detailed offerings provided.";
+
   return `
 --- ENTERPRISE KNOWLEDGE BASE (RAG STORE) ---
 Company Name: ${draft.companyName}
@@ -29,8 +39,8 @@ Core Brand Voice: ${draft.brandVoice}
 Strategic Value Propositions:
 ${draft.valueProps.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
-Core Service Offerings:
-${draft.services.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+Product & Service Portfolio:
+${offeringsText}
 
 Internal Assets Synced: ${draft.assets.length} items.
 --- END KNOWLEDGE BASE ---
@@ -62,10 +72,10 @@ You are the Enterprise Brand Assistant for ${tenantName}.
 Your core intelligence is grounded in the provided Enterprise Knowledge Base.
 
 Follow these rules:
-1. Always refer to the internal Knowledge Base first for facts about the company.
+1. Always refer to the internal Knowledge Base first for facts about the company and its specific products/services.
 2. If data is missing from the Knowledge Base, use Google Search grounding to verify the company's public presence.
 3. Maintain the company's specified brand voice in all responses.
-4. If asked about the brand's strategy, align your answer with the Mission and Value Propositions provided.
+4. If asked about the brand's strategy or specific product details, align your answer with the Portfolio and Value Propositions provided.
 
 ${enterpriseContext}
 `
@@ -95,7 +105,6 @@ ${enterpriseContext}
 
 /**
  * Generates a brand-aligned logo using gemini-2.5-flash-image (nano banana).
- * It leverages the onboarding data to craft a precise design prompt.
  */
 export const generateLogo = async (tenantId: string) => {
   if (!API_KEY) throw new Error("API Key not configured.");
@@ -104,10 +113,12 @@ export const generateLogo = async (tenantId: string) => {
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
   if (!draft) throw new Error("Onboarding context missing.");
 
+  const primaryOffering = draft.offerings?.[0]?.name || "Core Platform";
+
   const designPrompt = `Create a high-fidelity, professional corporate logo for "${draft.companyName}".
 Industry: ${draft.industry}.
 Brand Vision: ${draft.mission}.
-Tagline: ${draft.tagline}.
+Main Product Context: ${primaryOffering}.
 Value Propositions: ${draft.valueProps.join(', ')}.
 Brand Voice: ${draft.brandVoice}.
 
