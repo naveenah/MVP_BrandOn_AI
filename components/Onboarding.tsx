@@ -80,7 +80,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   const handleInputChange = (field: keyof OnboardingDraft, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value, updatedAt: new Date().toISOString() };
-      // Move async save outside of state setter callback
       OnboardingService.saveOnboardingDraft(tenant.id, updated);
       return updated;
     });
@@ -122,7 +121,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     handleInputChange(type, updated);
   };
 
-  // Offering Handlers
   const handleAddOffering = () => {
       const newOffering: ProductServiceDetail = {
           id: `off-${Date.now()}`,
@@ -163,8 +161,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   };
 
   const handleDeleteAsset = (assetId: string) => {
-    const updatedAssets = formData.assets.filter(a => a.id !== assetId);
-    handleInputChange('assets', updatedAssets);
+    setFormData(prev => {
+      const updatedAssets = prev.assets.filter(a => a.id !== assetId);
+      const updated = { ...prev, assets: updatedAssets, updatedAt: new Date().toISOString() };
+      OnboardingService.saveOnboardingDraft(tenant.id, updated);
+      return updated;
+    });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,8 +183,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       progress: 0
     };
 
-    const initialAssets = [...formData.assets, newAssetPlaceholder];
-    setFormData(prev => ({ ...prev, assets: initialAssets }));
+    setFormData(prev => ({ ...prev, assets: [...prev.assets, newAssetPlaceholder] }));
 
     try {
       const syncedAsset = await OnboardingService.uploadAsset(tenant.id, file, (progress) => {
@@ -429,7 +430,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
               </div>
               
               <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-[500px]">
-                {/* List View */}
                 <div className="w-full md:w-72 flex flex-col gap-3">
                    <div className="space-y-2 max-h-[500px] overflow-y-auto no-scrollbar">
                      {formData.offerings.length === 0 ? (
@@ -532,14 +532,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                          <div className={`w-5 h-5 bg-white rounded-full transition-transform ${formData.wixAutomationEnabled ? 'translate-x-7' : ''}`}></div>
                        </div>
                     </div>
-                    <ul className="space-y-3">
-                       {['REST API Site Cloning', 'Bulk CMS Sync', 'Headless Velo Config'].map((item, i) => (
-                         <li key={i} className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                            <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                            {item}
-                         </li>
-                       ))}
-                    </ul>
                  </div>
               </div>
             </div>
@@ -557,7 +549,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
                   </div>
                   <span className="text-lg font-black text-slate-900">Link Asset</span>
-                  <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">PDF, Images, or Video</p>
                 </div>
                 
                 <div className="space-y-4 h-64 overflow-y-auto no-scrollbar pr-2 flex flex-col">
@@ -570,9 +561,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                     <div className="space-y-3">
                       {formData.assets.map((asset) => (
                         <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 group transition-all hover:border-indigo-100 hover:shadow-sm">
-                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                          </div>
                           <div className="flex-1 overflow-hidden">
                             <p className="text-sm font-black text-slate-900 truncate">{asset.fileName}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase">{asset.status}</p>
@@ -580,7 +568,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset.id); }} 
                             className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                            title="Remove Asset"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
