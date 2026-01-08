@@ -2,8 +2,12 @@
 import { OnboardingDraft, OnboardingAsset } from '../types';
 import { DB } from './db';
 
+/**
+ * Saves or updates an onboarding draft for a tenant.
+ * Uses direct persistence to prevent race conditions during rapid state updates.
+ */
 export const saveOnboardingDraft = async (tenantId: string, draft: Partial<OnboardingDraft>): Promise<void> => {
-  const existing = await getOnboardingDraft(tenantId) || {} as OnboardingDraft;
+  const existing = await DB.get<OnboardingDraft>(DB.keys.ONBOARDING(tenantId)) || {} as OnboardingDraft;
   const updated = {
     ...existing,
     ...draft,
@@ -26,7 +30,7 @@ export const uploadAsset = async (
   return new Promise((resolve) => {
     let progress = 0;
     const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 20) + 10;
+      progress += Math.floor(Math.random() * 25) + 5;
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
@@ -40,6 +44,6 @@ export const uploadAsset = async (
         });
       }
       onProgress(progress);
-    }, 200);
+    }, 150);
   });
 };

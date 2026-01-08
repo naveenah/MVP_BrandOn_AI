@@ -9,7 +9,7 @@ interface DashboardProps { tenant: Tenant; }
 
 const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
-  const [activeTenant, setActiveTenant] = useState<Tenant>(tenant);
+  const [activeTenant, setActiveTenant] = useState<Tenant | null>(tenant);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [reportContent, setReportContent] = useState<string | null>(null);
@@ -21,12 +21,13 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
   });
 
   useEffect(() => {
+    if (!tenant) return;
+    
     const init = async () => {
       setActiveTenant(tenant);
       const posts = await ActionEngineService.getScheduledPosts(tenant.id);
       setScheduledPosts(posts);
 
-      // Load or create persistent analytics for this tenant
       let data = await DB.get<any[]>(DB.keys.ANALYTICS(tenant.id));
       if (!data) {
         data = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(name => ({
@@ -59,8 +60,19 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
     };
   }, [tenant]);
 
+  if (!activeTenant) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing Workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleInitializeWorkflow = async () => {
-    if (isGenerating) return;
+    if (isGenerating || !activeTenant) return;
     setIsGenerating(true);
     const newPosts = await ActionEngineService.synthesizeAIPipeline(activeTenant.id);
     const existing = await ActionEngineService.getScheduledPosts(activeTenant.id);
@@ -70,6 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
   };
 
   const handleExportIntelligence = async () => {
+    if (!activeTenant) return;
     setIsExporting(true);
     const report = await ActionEngineService.generateBrandIntelligenceReport(activeTenant.id);
     setReportContent(report);
@@ -78,6 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
 
   const handleCreateManualPost = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeTenant) return;
     await ActionEngineService.createScheduledPost(activeTenant.id, {
       ...manualPost,
       publishAt: new Date(manualPost.publishAt).toISOString(),
@@ -90,7 +104,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
   const progress = activeTenant.automationWorkflow?.overallProgress || 0;
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Brand OS Core</h1>
@@ -144,7 +158,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tenant }) => {
         </div>
       )}
 
-      <section className="bg-slate-900 rounded-[2.5rem] p-8 md:p-10 text-white overflow-hidden relative border border-slate-800">
+      <section className="bg-slate-900 rounded-[2.5rem] p-8 md:p-10 text-white overflow-hidden relative border border-slate-800 shadow-2xl">
         <div className="flex items-center justify-between mb-10 relative z-10">
           <div><h2 className="text-xl font-black tracking-tight uppercase tracking-widest text-indigo-400">Action Engine Cluster</h2><p className="text-slate-400 text-sm mt-1">Real-time projection from Neon-backed persistent state.</p></div>
           <div className="flex items-center gap-4"><p className="text-2xl font-black text-white">{progress}%</p></div>

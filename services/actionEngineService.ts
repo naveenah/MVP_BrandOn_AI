@@ -54,12 +54,15 @@ export const synthesizeAIPipeline = async (tenantId: string): Promise<ScheduledP
 export const generateBrandIntelligenceReport = async (tenantId: string): Promise<string> => {
   if (!API_KEY) return "AI Configuration Missing.";
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
-  const pipeline = await getScheduledPosts(tenantId);
   const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-  const prompt = `Generate a high-level "Enterprise Intelligence Report" for ${draft?.companyName}. 1. Summary, 2. Strategy, 3. Pipeline analysis.`;
-  const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: [{ parts: [{ text: prompt }] }] });
-  return response.text || "Failed to generate.";
+  const prompt = `Generate a high-level "Enterprise Intelligence Report" for ${draft?.companyName || 'the organization'}. 1. Summary, 2. Strategy, 3. Future Opportunities.`;
+  try {
+    const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: [{ parts: [{ text: prompt }] }] });
+    return response.text || "Failed to generate.";
+  } catch (e) {
+    return "Error synthesizing intelligence report.";
+  }
 };
 
 const generateStaticFallback = (tenantId: string): ScheduledPost[] => ([{
@@ -76,7 +79,10 @@ export const triggerAutomationRipple = async (tenantId: string): Promise<void> =
   
   const updateStore = async (channels: AutomationChannel[], progress: number) => {
     const tenants = await DB.get<Tenant[]>(DB.keys.TENANTS) || [];
-    const updated = tenants.map(t => t.id === tenantId ? { ...t, automationWorkflow: { channels, overallProgress: progress } } : t);
+    const updated = tenants.map(t => t.id === tenantId ? { 
+      ...t, 
+      automationWorkflow: { channels, overallProgress: progress } 
+    } : t);
     await DB.set(DB.keys.TENANTS, updated);
     window.dispatchEvent(new CustomEvent('tenantUpdated', { detail: { tenantId } }));
   };
@@ -87,9 +93,11 @@ export const triggerAutomationRipple = async (tenantId: string): Promise<void> =
     setTimeout(async () => {
       const tenants = await DB.get<Tenant[]>(DB.keys.TENANTS);
       const tenant = tenants?.find(t => t.id === tenantId);
-      if (!tenant?.automationWorkflow) return;
-
-      const updatedChannels = tenant.automationWorkflow.channels.map(c => 
+      
+      // Defensive check for initialization
+      const currentChannels = tenant?.automationWorkflow?.channels || initialChannels;
+      
+      const updatedChannels = currentChannels.map(c => 
         c.type === type ? { ...c, status: 'Active' as const, lastAction: 'Synced with cloud context' } : c
       );
       

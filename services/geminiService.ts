@@ -93,6 +93,55 @@ ${enterpriseContext}
   }
 };
 
+/**
+ * Generates a brand-aligned logo using gemini-2.5-flash-image (nano banana).
+ * It leverages the onboarding data to craft a precise design prompt.
+ */
+export const generateLogo = async (tenantId: string) => {
+  if (!API_KEY) throw new Error("API Key not configured.");
+  
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const draft = await OnboardingService.getOnboardingDraft(tenantId);
+  if (!draft) throw new Error("Onboarding context missing.");
+
+  const designPrompt = `Create a high-fidelity, professional corporate logo for "${draft.companyName}".
+Industry: ${draft.industry}.
+Brand Vision: ${draft.mission}.
+Tagline: ${draft.tagline}.
+Value Propositions: ${draft.valueProps.join(', ')}.
+Brand Voice: ${draft.brandVoice}.
+
+Design Constraints:
+- Clean, modern, and minimal.
+- Vector-style suitable for a tech enterprise.
+- Primary colors should align with the ${draft.industry} industry standards.
+- High contrast and recognizable at small sizes.
+- No text inside the icon unless it is the company name "${draft.companyName}".
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: designPrompt }] },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("Model failed to produce image data.");
+  } catch (error) {
+    console.error("Logo Generation Error:", error);
+    throw error;
+  }
+};
+
 export const getChatHistory = async (tenantId: string) => {
   return await DB.get<any[]>(DB.keys.CHATS(tenantId)) || [];
 };

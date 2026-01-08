@@ -4,7 +4,12 @@ import { Tenant } from '../types';
 import * as GeminiService from '../services/geminiService';
 
 interface Citation { title: string; uri: string; }
-interface Message { role: 'user' | 'model'; content: string; citations?: Citation[]; }
+interface Message { 
+  role: 'user' | 'model'; 
+  content: string; 
+  citations?: Citation[]; 
+  imageUrl?: string;
+}
 
 interface ExploreProps { tenant: Tenant; }
 
@@ -12,6 +17,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +29,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
       })) as Message[];
       
       if (formatted.length === 0) {
-        setMessages([{ role: 'model', content: `Identity Verified. I am grounded in the **${tenant.name}** Enterprise Knowledge Base. Ask me anything about your brand strategy or presence.` }]);
+        setMessages([{ role: 'model', content: `Identity Verified. I am grounded in the **${tenant.name}** Enterprise Knowledge Base. Ask me anything about your brand strategy or use the Design Studio to create assets.` }]);
       } else {
         setMessages(formatted);
       }
@@ -33,7 +39,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isThinking]);
+  }, [messages, isThinking, isGeneratingLogo]);
 
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
@@ -50,6 +56,28 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
       citations: result.citations
     }]);
     setIsThinking(false);
+  };
+
+  const handleGenerateLogo = async () => {
+    if (isGeneratingLogo) return;
+    setIsGeneratingLogo(true);
+    setMessages(prev => [...prev, { role: 'user', content: "Generate a professional brand logo based on our onboarding profile." }]);
+
+    try {
+      const imageUrl = await GeminiService.generateLogo(tenant.id);
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: `Logo synthesized successfully. This design incorporates your industry presence, tagline, and brand voice from the enterprise RAG store.`,
+        imageUrl 
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: "I encountered an error while synthesizing the brand asset. Please verify your onboarding context." 
+      }]);
+    } finally {
+      setIsGeneratingLogo(false);
+    }
   };
 
   const handleClear = async () => {
@@ -76,7 +104,17 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 block">Grounded in Onboarding context</span>
             </div>
           </div>
-          <button onClick={handleClear} className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors">Reset Store</button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={handleGenerateLogo}
+              disabled={isGeneratingLogo || isThinking}
+              className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100 flex items-center gap-2 disabled:opacity-50"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h14a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              Synthesize Logo
+            </button>
+            <button onClick={handleClear} className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors">Reset Context</button>
+          </div>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-10 bg-[#fcfcfd] no-scrollbar">
@@ -88,6 +126,23 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
                 }`}>
                   <p className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{m.content}</p>
                   
+                  {m.imageUrl && (
+                    <div className="mt-6">
+                      <div className="relative group/img bg-slate-50 rounded-3xl p-4 border border-slate-100 overflow-hidden shadow-inner">
+                        <img src={m.imageUrl} alt="Generated Brand Logo" className="w-full h-auto rounded-2xl shadow-2xl transition-transform hover:scale-105" />
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                          <a 
+                            href={m.imageUrl} 
+                            download="brand-logo.png"
+                            className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-50"
+                          >
+                            Download PNG
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {m.role === 'model' && m.citations && m.citations.length > 0 && (
                     <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Web Grounding References</p>
@@ -111,11 +166,13 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
               </div>
             </div>
           ))}
-          {isThinking && (
+          {(isThinking || isGeneratingLogo) && (
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm flex items-center gap-3">
                 <div className="flex gap-1.5"><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></div><div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></div></div>
-                <span className="text-xs font-bold text-slate-400 italic">Querying RAG Knowledge Base...</span>
+                <span className="text-xs font-bold text-slate-400 italic">
+                  {isGeneratingLogo ? 'Synthesizing Brand Asset (Nano Banana)...' : 'Querying RAG Knowledge Base...'}
+                </span>
               </div>
             </div>
           )}
@@ -129,7 +186,7 @@ const Explore: React.FC<ExploreProps> = ({ tenant }) => {
                 placeholder="Ask your Brand Intelligence Agent..." className="flex-1 bg-transparent border-none focus:ring-0 text-[16px] text-slate-900 font-semibold px-6 py-4"
               />
               <button 
-                onClick={handleSend} disabled={!input.trim() || isThinking}
+                onClick={handleSend} disabled={!input.trim() || isThinking || isGeneratingLogo}
                 className="p-5 bg-indigo-600 text-white rounded-[1.6rem] shadow-xl hover:bg-indigo-700 disabled:opacity-30 transition-all active:scale-90"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
