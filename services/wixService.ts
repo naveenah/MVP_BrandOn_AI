@@ -8,20 +8,23 @@ import { WixSite, ProductServiceDetail } from '../types';
 
 const getComponentHtml = (type: string, attr: any) => {
   const safeAttr = attr || {};
+  
+  // Custom Style Parser (NFR-905)
+  const getCustomStyles = (a: any) => {
+    let styles = '';
+    if (a.backgroundColor) styles += `background-color: ${a.backgroundColor};`;
+    if (a.padding) styles += `padding: ${a.padding};`;
+    if (a.height) styles += `min-height: ${a.height};`;
+    if (a.alignment) styles += `text-align: ${a.alignment};`;
+    if (a.rounded) styles += `border-radius: ${a.rounded};`;
+    if (a.borderStyle) styles += `border: ${a.borderStyle};`;
+    return styles;
+  };
+
   const templates: Record<string, (a: any) => string> = {
-    'Header': (a) => `
-      <nav class="p-6 flex justify-between items-center border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="font-black text-2xl tracking-tighter text-indigo-600">${a.siteName || 'BrandOS'}</div>
-        <div class="hidden md:flex gap-8 text-sm font-bold text-gray-500">
-          <a href="#" onclick="window.parent.postMessage({type: 'NAVIGATE', payload: {path: '${a.link1 || '/'}'}}, '*'); return false;" class="hover:text-indigo-600">${a.nav1 || 'Features'}</a>
-          <a href="#" onclick="window.parent.postMessage({type: 'NAVIGATE', payload: {path: '${a.link2 || '/'}'}}, '*'); return false;" class="hover:text-indigo-600">${a.nav2 || 'Case Studies'}</a>
-          <a href="#" onclick="window.parent.postMessage({type: 'NAVIGATE', payload: {path: '${a.link3 || '/'}'}}, '*'); return false;" class="hover:text-indigo-600">${a.nav3 || 'Enterprise'}</a>
-        </div>
-        <button class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-100">${a.cta || 'Get Started'}</button>
-      </nav>
-    `,
+    // Presets
     'Hero': (a) => `
-      <header class="py-24 px-12 text-center max-w-5xl mx-auto space-y-8">
+      <header class="py-24 px-12 text-center max-w-5xl mx-auto space-y-8" style="${getCustomStyles(a)}">
         <h1 class="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight">
           ${a.title || 'Build the <span class="text-indigo-600">Intelligent</span> Future.'}
         </h1>
@@ -39,7 +42,7 @@ const getComponentHtml = (type: string, attr: any) => {
       </header>
     `,
     'Grid': (a) => `
-      <section class="bg-gray-50 py-24 px-12">
+      <section class="bg-gray-50 py-24 px-12" style="${getCustomStyles(a)}">
         <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           ${[
             {t: a.item1Title || 'Autonomous Agents', d: a.item1Desc || 'Adaptive scaling infrastructure.'},
@@ -58,7 +61,7 @@ const getComponentHtml = (type: string, attr: any) => {
       </section>
     `,
     'FeaturesList': (a) => `
-      <section class="py-24 px-12 bg-white">
+      <section class="py-24 px-12 bg-white" style="${getCustomStyles(a)}">
         <div class="max-w-5xl mx-auto">
           <h2 class="text-4xl font-black text-center mb-16">${a.title || 'Corporate Capabilities'}</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
@@ -83,8 +86,7 @@ const getComponentHtml = (type: string, attr: any) => {
       </section>
     `,
     'Testimonials': (a) => `
-      <section class="py-24 px-12 bg-slate-50 overflow-hidden relative">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
+      <section class="py-24 px-12 bg-slate-50 overflow-hidden relative" style="${getCustomStyles(a)}">
         <div class="max-w-4xl mx-auto text-center space-y-12">
           <h2 class="text-3xl font-black text-slate-900 tracking-tight">${a.title || 'Validated by Industry Leaders'}</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -104,96 +106,56 @@ const getComponentHtml = (type: string, attr: any) => {
         </div>
       </section>
     `,
-    'Team': (a) => `
-      <section class="py-24 px-12 bg-white">
-        <div class="max-w-6xl mx-auto text-center">
-          <h2 class="text-4xl font-black mb-16">${a.title || 'Leadership Collective'}</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+
+    // Abstract Blocks
+    'TextContent': (a) => `
+      <section class="py-16 px-12" style="${getCustomStyles(a)}">
+        <div class="max-w-4xl mx-auto space-y-4">
+          ${a.heading ? `<h2 class="text-3xl font-black text-slate-900 leading-tight">${a.heading}</h2>` : ''}
+          ${a.body ? `<p class="text-lg text-slate-600 font-medium leading-relaxed">${a.body}</p>` : ''}
+        </div>
+      </section>
+    `,
+    'MediaBlock': (a) => `
+      <section class="py-12 px-12" style="${getCustomStyles(a)}">
+        <div class="max-w-5xl mx-auto space-y-4">
+          <div class="overflow-hidden" style="width: ${a.imageWidth || '100%'}; border-radius: ${a.rounded || '2rem'};">
+            <img src="${a.imageUrl || 'https://picsum.photos/1200/600?random=' + Math.random()}" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700" alt="Brand Asset" />
+          </div>
+          ${a.caption ? `<p class="text-xs font-black text-slate-400 uppercase tracking-widest text-center">${a.caption}</p>` : ''}
+        </div>
+      </section>
+    `,
+    'LinkList': (a) => `
+      <section class="py-16 px-12 bg-slate-900 text-white" style="${getCustomStyles(a)}">
+        <div class="max-w-4xl mx-auto">
+          <h3 class="text-sm font-black text-indigo-400 uppercase tracking-[0.2em] mb-8">${a.title || 'Resources'}</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             ${[
-              {n: a.name1 || 'Marcus Thorne', r: a.role1 || 'Chief Strategist'},
-              {n: a.name2 || 'Elena Vance', r: a.role2 || 'Head of AI Architecture'},
-              {n: a.name3 || 'Julian Grey', r: a.role3 || 'Ecosystem Lead'}
-            ].map(item => `
-              <div class="space-y-4">
-                <div class="w-32 h-32 bg-slate-100 rounded-full mx-auto ring-4 ring-slate-50 flex items-center justify-center text-slate-400">
-                  <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                </div>
-                <h4 class="text-xl font-black text-slate-900">${item.n}</h4>
-                <p class="text-indigo-600 text-xs font-black uppercase tracking-widest">${item.r}</p>
-              </div>
+              {l: a.link1Label || 'Terms of Service', u: a.link1Url || '#'},
+              {l: a.link2Label || 'Privacy Policy', u: a.link2Url || '#'},
+              {l: a.link3Label || 'API Docs', u: a.link3Url || '#'}
+            ].filter(i => i.l).map(item => `
+              <a href="${item.u}" class="flex items-center justify-between p-5 bg-slate-800 rounded-2xl hover:bg-slate-700 transition-all border border-slate-700 group">
+                <span class="font-bold text-sm">${item.l}</span>
+                <svg class="w-4 h-4 text-slate-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+              </a>
             `).join('')}
           </div>
         </div>
       </section>
     `,
-    'FAQ': (a) => `
-      <section class="py-24 px-12 bg-slate-950 text-white">
-        <div class="max-w-3xl mx-auto space-y-12">
-          <div class="text-center space-y-4">
-            <h2 class="text-4xl font-black tracking-tight">${a.title || 'Knowledge Exchange'}</h2>
-            <p class="text-slate-400 font-medium">Common inquiries regarding our persistence layer.</p>
-          </div>
-          <div class="space-y-6">
-            ${[
-              {q: a.q1 || 'How secure is our brand data?', ans: a.a1 || 'All data is isolated per tenant using row-level security and encrypted at rest.'},
-              {q: a.q2 || 'Can we integrate custom LLMs?', ans: a.a2 || 'Enterprise tiers support dedicated model fine-tuning and custom gateways.'},
-              {q: a.q3 || 'What is the sync latency?', ans: a.a3 || 'Global sync targets <200ms for edge-replicated knowledge storage.'}
-            ].map(item => `
-              <div class="p-8 bg-slate-900 rounded-3xl border border-slate-800">
-                <h4 class="text-lg font-black mb-3 text-indigo-400">${item.q}</h4>
-                <p class="text-slate-400 text-sm leading-relaxed font-medium">${item.ans}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </section>
+    'Spacer': (a) => `
+      <div style="${getCustomStyles(a)}"></div>
     `,
-    'Pricing': (a) => `
-      <section class="py-24 px-12 bg-white">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div class="p-10 border-2 border-gray-100 rounded-[3rem] text-center">
-            <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">${a.plan1Name || 'Standard'}</p>
-            <p class="text-5xl font-black mb-6">${a.plan1Price || '$199'}<span class="text-lg text-gray-400">/mo</span></p>
-            <button class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black">${a.plan1Btn || 'Pro Plan'}</button>
-          </div>
-          <div class="p-10 border-2 border-indigo-600 bg-indigo-600 rounded-[3rem] text-center text-white shadow-xl shadow-indigo-100">
-            <p class="text-sm font-black opacity-60 uppercase tracking-widest mb-4">${a.plan2Name || 'Custom'}</p>
-            <p class="text-5xl font-black mb-6">${a.plan2Price || 'Contact'}</p>
-            <button class="w-full py-4 bg-white text-indigo-600 rounded-2xl font-black">${a.plan2Btn || 'Enterprise'}</button>
-          </div>
-        </div>
-      </section>
+    'CustomHtml': (a) => `
+      <div class="${a.cssClass || ''}" style="${getCustomStyles(a)}">
+        ${a.htmlContent || '<p class="text-slate-400 font-bold p-8 border-2 border-dashed border-slate-100 rounded-3xl text-center">Custom HTML block: Open Settings to edit raw code.</p>'}
+      </div>
     `,
-    'CallToAction': (a) => `
-      <section class="py-24 px-12">
-        <div class="max-w-5xl mx-auto bg-indigo-600 rounded-[4rem] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
-          <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-          <div class="relative z-10 space-y-8">
-            <h2 class="text-4xl md:text-6xl font-black tracking-tighter">${a.title || 'Join the Intelligent Frontier'}</h2>
-            <p class="text-xl font-medium opacity-80 max-w-2xl mx-auto leading-relaxed">${a.subtitle || 'Experience the future of enterprise brand management today.'}</p>
-            <button class="px-10 py-5 bg-white text-indigo-600 rounded-2xl font-black text-lg hover:bg-slate-50 transition-all shadow-xl" onclick="window.parent.postMessage({type: 'NAVIGATE', payload: {path: '${a.btnLink || '/'}'}}, '*')">
-              ${a.btnText || 'Start My Trial'}
-            </button>
-          </div>
-        </div>
-      </section>
-    `,
-    'Newsletter': (a) => `
-      <section class="py-24 px-12 bg-white border-t border-slate-100">
-        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
-          <div class="flex-1 text-left space-y-4">
-            <h2 class="text-3xl font-black text-slate-900">${a.title || 'Enterprise Intelligence Sync'}</h2>
-            <p class="text-slate-500 font-medium">${a.subtitle || 'Receive weekly tactical reports on brand automation.'}</p>
-          </div>
-          <div class="w-full md:w-auto flex gap-3">
-            <input type="email" placeholder="${a.placeholder || 'corporate@email.com'}" class="px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-600 min-w-[280px] font-bold" />
-            <button class="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs whitespace-nowrap">${a.btnText || 'Subscribe'}</button>
-          </div>
-        </div>
-      </section>
-    `,
+    
     'Contact': (a) => `
-      <section class="bg-slate-900 py-24 px-12 text-white text-center">
+      <section class="bg-slate-900 py-24 px-12 text-white text-center" style="${getCustomStyles(a)}">
         <h2 class="text-5xl font-black mb-8">${a.title || 'Ready to Scale?'}</h2>
         <p class="text-slate-400 mb-10 max-w-xl mx-auto">${a.subtitle || 'Join 500+ enterprises today.'}</p>
         <button class="px-10 py-5 bg-indigo-600 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-500/20">
@@ -222,12 +184,9 @@ export const generatePageHtml = (siteName: string, templateType: string = 'Enter
         <style>
           body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            min-height: 100vh;
+            margin: 0; padding: 0; min-height: 100vh;
             ${templateStyles[templateType] || templateStyles['Enterprise Base']}
             overflow-x: hidden;
-            transition: background 0.5s ease;
           }
           .section-wrapper { 
             position: relative; 
@@ -237,56 +196,35 @@ export const generatePageHtml = (siteName: string, templateType: string = 'Enter
           }
           .section-wrapper:hover { 
             border-color: rgba(79, 70, 229, 0.4); 
-            background: rgba(79, 70, 229, 0.02);
+            background: rgba(79, 70, 229, 0.01);
           }
           .section-wrapper.active {
             border-color: #4f46e5;
             background: rgba(79, 70, 229, 0.04);
-            box-shadow: inset 0 0 20px rgba(79, 70, 229, 0.05);
+            box-shadow: inset 0 0 40px rgba(79, 70, 229, 0.05);
           }
           .section-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            display: none;
-            gap: 0.5rem;
-            z-index: 100;
+            position: absolute; top: 1rem; right: 1rem;
+            display: none; gap: 0.5rem; z-index: 100;
           }
           .section-wrapper:hover .section-controls, .section-wrapper.active .section-controls {
             display: flex;
           }
           .control-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s ease;
+            background: #ef4444; color: white; border: none; padding: 8px;
+            border-radius: 10px; cursor: pointer; display: flex; align-items: center;
           }
-          .control-btn:hover { transform: scale(1.1); }
           .empty-state { 
             border: 4px dashed rgba(148, 163, 184, 0.3); 
-            border-radius: 3rem; 
-            margin: 4rem 2rem; 
-            padding: 8rem 2rem; 
-            text-align: center; 
-            color: #94a3b8; 
+            border-radius: 3rem; margin: 4rem 2rem; 
+            padding: 8rem 2rem; text-align: center; color: #94a3b8; 
           }
         </style>
       </head>
       <body>
-        <div id="canvas-root">
-          <div id="sections-container"></div>
-        </div>
-
+        <div id="canvas-root"><div id="sections-container"></div></div>
         <script>
           const container = document.getElementById('sections-container');
-          const siteName = "${siteName}";
           const getComponentHtml = ${getComponentHtml.toString()};
 
           function renderSections(sections) {
@@ -298,7 +236,7 @@ export const generatePageHtml = (siteName: string, templateType: string = 'Enter
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                   </div>
                   <p class="text-2xl font-black mb-2">${templateType}</p>
-                  <p class="text-sm font-bold opacity-60">Canvas ready. Start building by adding widgets.</p>
+                  <p class="text-sm font-bold opacity-60">Canvas ready. Drag or select blocks to build your page.</p>
                 </div>
               \`;
               return;
@@ -319,7 +257,7 @@ export const generatePageHtml = (siteName: string, templateType: string = 'Enter
               const controls = document.createElement('div');
               controls.className = 'section-controls';
               controls.innerHTML = \`
-                <button class="control-btn" title="Remove Widget" onclick="event.stopPropagation(); window.parent.postMessage({type: 'REQUEST_DELETE', payload: {id: '\${payload.id}'}}, '*')">
+                <button class="control-btn" onclick="event.stopPropagation(); window.parent.postMessage({type: 'REQUEST_DELETE', payload: {id: '\${payload.id}'}}, '*')">
                   <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               \`;
@@ -334,30 +272,12 @@ export const generatePageHtml = (siteName: string, templateType: string = 'Enter
             });
           }
 
-          // Initial render
           const initialSections = ${JSON.stringify(sections)};
           renderSections(initialSections);
 
           window.addEventListener('message', (event) => {
-            try {
-              const { type, payload } = event.data;
-              if (type === 'SYNC_STATE') {
-                renderSections(payload.sections);
-              }
-              if (type === 'UPDATE_SECTION') {
-                const contentEl = document.getElementById('content-' + payload.id);
-                if (contentEl) {
-                  contentEl.innerHTML = getComponentHtml(payload.type, payload.attributes);
-                }
-              }
-              if (type === 'REMOVE_SECTION') {
-                const el = document.getElementById(payload.id);
-                if (el) el.remove();
-                if (container.children.length === 0) renderSections([]);
-              }
-            } catch (err) {
-              console.error("Iframe script error:", err);
-            }
+            const { type, payload } = event.data;
+            if (type === 'SYNC_STATE') renderSections(payload.sections);
           });
         </script>
       </body>
@@ -369,7 +289,6 @@ export const cloneTemplateSite = async (tenantId: string, siteName: string, temp
   await new Promise(resolve => setTimeout(resolve, 800));
   const siteId = `wix-${Math.random().toString(36).substr(2, 9)}`;
   const initialPage = { id: 'p-home', name: 'Home', path: '/', sections: [] };
-  
   return {
     id: siteId,
     name: siteName,
