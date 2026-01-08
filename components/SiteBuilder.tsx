@@ -19,7 +19,13 @@ const WIDGET_DEFS: Record<string, string[]> = {
   'Header': ['siteName', 'nav1', 'link1', 'nav2', 'link2', 'nav3', 'link3', 'cta'],
   'Hero': ['title', 'subtitle', 'btn1Text', 'btn1Link', 'btn2Text'],
   'Grid': ['item1Title', 'item1Desc', 'item2Title', 'item2Desc', 'item3Title', 'item3Desc'],
+  'FeaturesList': ['title', 'feature1', 'desc1', 'feature2', 'desc2', 'feature3', 'desc3', 'feature4', 'desc4'],
+  'Testimonials': ['title', 'quote1', 'author1', 'role1', 'quote2', 'author2', 'role2'],
+  'Team': ['title', 'name1', 'role1', 'name2', 'role2', 'name3', 'role3'],
+  'FAQ': ['title', 'q1', 'a1', 'q2', 'a2', 'q3', 'a3'],
   'Pricing': ['plan1Name', 'plan1Price', 'plan1Btn', 'plan2Name', 'plan2Price', 'plan2Btn'],
+  'CallToAction': ['title', 'subtitle', 'btnText', 'btnLink'],
+  'Newsletter': ['title', 'subtitle', 'placeholder', 'btnText'],
   'Contact': ['title', 'subtitle', 'btnText']
 };
 

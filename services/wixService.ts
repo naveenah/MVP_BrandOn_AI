@@ -57,6 +57,97 @@ const getComponentHtml = (type: string, attr: any) => {
         </div>
       </section>
     `,
+    'FeaturesList': (a) => `
+      <section class="py-24 px-12 bg-white">
+        <div class="max-w-5xl mx-auto">
+          <h2 class="text-4xl font-black text-center mb-16">${a.title || 'Corporate Capabilities'}</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+            ${[
+              {f: a.feature1 || 'Neural Sync', d: a.desc1 || 'Real-time alignment with corporate brain.'},
+              {f: a.feature2 || 'Brand Guardrails', d: a.desc2 || 'Automated compliance enforcement.'},
+              {f: a.feature3 || 'Multi-Modal Generation', d: a.desc3 || 'Seamless cross-channel orchestration.'},
+              {f: a.feature4 || 'Advanced RAG', d: a.desc4 || 'Hyper-grounded content intelligence.'}
+            ].map(item => `
+              <div class="flex gap-6 items-start">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex-shrink-0 flex items-center justify-center text-white">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div>
+                  <h4 class="text-xl font-bold text-slate-900 mb-2">${item.f}</h4>
+                  <p class="text-slate-500 font-medium leading-relaxed text-sm">${item.d}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+    `,
+    'Testimonials': (a) => `
+      <section class="py-24 px-12 bg-slate-50 overflow-hidden relative">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
+        <div class="max-w-4xl mx-auto text-center space-y-12">
+          <h2 class="text-3xl font-black text-slate-900 tracking-tight">${a.title || 'Validated by Industry Leaders'}</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            ${[
+              {q: a.quote1 || 'BrandOS transformed our global go-to-market speed by 400%.', aut: a.author1 || 'Sarah Chen', role: a.role1 || 'VP of Marketing, TechFlow'},
+              {q: a.quote2 || 'The RAG integration ensures our voice is never compromised.', aut: a.author2 || 'David Miller', role: a.role2 || 'CTO, OmniScale'}
+            ].map(item => `
+              <div class="bg-white p-10 rounded-[2.5rem] text-left border border-slate-100 shadow-sm relative">
+                <p class="text-lg italic font-medium text-slate-800 mb-8 leading-relaxed">"${item.q}"</p>
+                <div>
+                  <p class="font-black text-slate-900 text-sm">${item.aut}</p>
+                  <p class="text-indigo-600 text-[10px] font-black uppercase tracking-widest mt-1">${item.role}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+    `,
+    'Team': (a) => `
+      <section class="py-24 px-12 bg-white">
+        <div class="max-w-6xl mx-auto text-center">
+          <h2 class="text-4xl font-black mb-16">${a.title || 'Leadership Collective'}</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+            ${[
+              {n: a.name1 || 'Marcus Thorne', r: a.role1 || 'Chief Strategist'},
+              {n: a.name2 || 'Elena Vance', r: a.role2 || 'Head of AI Architecture'},
+              {n: a.name3 || 'Julian Grey', r: a.role3 || 'Ecosystem Lead'}
+            ].map(item => `
+              <div class="space-y-4">
+                <div class="w-32 h-32 bg-slate-100 rounded-full mx-auto ring-4 ring-slate-50 flex items-center justify-center text-slate-400">
+                  <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <h4 class="text-xl font-black text-slate-900">${item.n}</h4>
+                <p class="text-indigo-600 text-xs font-black uppercase tracking-widest">${item.r}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+    `,
+    'FAQ': (a) => `
+      <section class="py-24 px-12 bg-slate-950 text-white">
+        <div class="max-w-3xl mx-auto space-y-12">
+          <div class="text-center space-y-4">
+            <h2 class="text-4xl font-black tracking-tight">${a.title || 'Knowledge Exchange'}</h2>
+            <p class="text-slate-400 font-medium">Common inquiries regarding our persistence layer.</p>
+          </div>
+          <div class="space-y-6">
+            ${[
+              {q: a.q1 || 'How secure is our brand data?', ans: a.a1 || 'All data is isolated per tenant using row-level security and encrypted at rest.'},
+              {q: a.q2 || 'Can we integrate custom LLMs?', ans: a.a2 || 'Enterprise tiers support dedicated model fine-tuning and custom gateways.'},
+              {q: a.q3 || 'What is the sync latency?', ans: a.a3 || 'Global sync targets <200ms for edge-replicated knowledge storage.'}
+            ].map(item => `
+              <div class="p-8 bg-slate-900 rounded-3xl border border-slate-800">
+                <h4 class="text-lg font-black mb-3 text-indigo-400">${item.q}</h4>
+                <p class="text-slate-400 text-sm leading-relaxed font-medium">${item.ans}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+    `,
     'Pricing': (a) => `
       <section class="py-24 px-12 bg-white">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -69,6 +160,34 @@ const getComponentHtml = (type: string, attr: any) => {
             <p class="text-sm font-black opacity-60 uppercase tracking-widest mb-4">${a.plan2Name || 'Custom'}</p>
             <p class="text-5xl font-black mb-6">${a.plan2Price || 'Contact'}</p>
             <button class="w-full py-4 bg-white text-indigo-600 rounded-2xl font-black">${a.plan2Btn || 'Enterprise'}</button>
+          </div>
+        </div>
+      </section>
+    `,
+    'CallToAction': (a) => `
+      <section class="py-24 px-12">
+        <div class="max-w-5xl mx-auto bg-indigo-600 rounded-[4rem] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
+          <div class="relative z-10 space-y-8">
+            <h2 class="text-4xl md:text-6xl font-black tracking-tighter">${a.title || 'Join the Intelligent Frontier'}</h2>
+            <p class="text-xl font-medium opacity-80 max-w-2xl mx-auto leading-relaxed">${a.subtitle || 'Experience the future of enterprise brand management today.'}</p>
+            <button class="px-10 py-5 bg-white text-indigo-600 rounded-2xl font-black text-lg hover:bg-slate-50 transition-all shadow-xl" onclick="window.parent.postMessage({type: 'NAVIGATE', payload: {path: '${a.btnLink || '/'}'}}, '*')">
+              ${a.btnText || 'Start My Trial'}
+            </button>
+          </div>
+        </div>
+      </section>
+    `,
+    'Newsletter': (a) => `
+      <section class="py-24 px-12 bg-white border-t border-slate-100">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
+          <div class="flex-1 text-left space-y-4">
+            <h2 class="text-3xl font-black text-slate-900">${a.title || 'Enterprise Intelligence Sync'}</h2>
+            <p class="text-slate-500 font-medium">${a.subtitle || 'Receive weekly tactical reports on brand automation.'}</p>
+          </div>
+          <div class="w-full md:w-auto flex gap-3">
+            <input type="email" placeholder="${a.placeholder || 'corporate@email.com'}" class="px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-indigo-600 min-w-[280px] font-bold" />
+            <button class="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs whitespace-nowrap">${a.btnText || 'Subscribe'}</button>
           </div>
         </div>
       </section>
