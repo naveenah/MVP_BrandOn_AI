@@ -18,6 +18,13 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
   const [infra, setInfra] = useState(getInfraStatus());
   const [isTesting, setIsTesting] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+  
+  const [wixConfig, setWixConfig] = useState(tenant.wixIntegration || {
+    enabled: false,
+    siteId: '',
+    apiKey: '',
+    autoSync: false
+  });
 
   useEffect(() => {
     setWorkspaceName(tenant.name);
@@ -55,7 +62,11 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
     const client = new ApiClient(tenant.id);
     try {
       await client.request('settings/update', { method: 'PATCH' });
-      const updatedTenant: Tenant = { ...tenant, name: workspaceName };
+      const updatedTenant: Tenant = { 
+        ...tenant, 
+        name: workspaceName,
+        wixIntegration: wixConfig
+      };
       onUpdateTenant(updatedTenant);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Sync failed");
@@ -65,7 +76,7 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 pb-20">
+    <div className="max-w-4xl mx-auto space-y-10 pb-20 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">Workspace Settings</h1>
         <div className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100">
@@ -135,6 +146,38 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
         </div>
       </section>
 
+      {/* Digital Presence Automation Section */}
+      <section className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Digital Presence Engine</h2>
+            <p className="text-slate-500 font-medium mt-1">Automate building & deployment via Wix REST APIs / SDK</p>
+          </div>
+          <div className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${wixConfig.enabled ? 'bg-indigo-600' : 'bg-slate-200'}`} onClick={() => setWixConfig({...wixConfig, enabled: !wixConfig.enabled})}>
+            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${wixConfig.enabled ? 'translate-x-6' : ''}`}></div>
+          </div>
+        </div>
+
+        {wixConfig.enabled && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in zoom-in-95 duration-300">
+             <div className="space-y-3">
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Wix Site ID</label>
+               <input type="text" value={wixConfig.siteId} onChange={(e) => setWixConfig({...wixConfig, siteId: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900" placeholder="e.g. site-123-abc" />
+             </div>
+             <div className="space-y-3">
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">REST API Key</label>
+               <input type="password" value={wixConfig.apiKey} onChange={(e) => setWixConfig({...wixConfig, apiKey: e.target.value})} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900" placeholder="••••••••••••••••" />
+             </div>
+             <div className="md:col-span-2 flex items-center gap-4 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
+                <input type="checkbox" checked={wixConfig.autoSync} onChange={(e) => setWixConfig({...wixConfig, autoSync: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600" id="autosync" />
+                <label htmlFor="autosync" className="text-sm font-bold text-slate-700 cursor-pointer">
+                  Enable Headless Auto-Sync (NFR-901): Automatically update Wix CMS from Enterprise RAG store.
+                </label>
+             </div>
+          </div>
+        )}
+      </section>
+
       {/* Subscription Section */}
       <section className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="space-y-4">
@@ -177,7 +220,7 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
           </div>
         </div>
         <div className="pt-6 border-t border-slate-100 flex justify-end">
-           <button onClick={handleSaveConfig} disabled={isSaving || workspaceName === tenant.name} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all disabled:opacity-50">
+           <button onClick={handleSaveConfig} disabled={isSaving || (workspaceName === tenant.name && JSON.stringify(wixConfig) === JSON.stringify(tenant.wixIntegration))} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all disabled:opacity-50">
              {isSaving ? 'Syncing...' : 'Save Context'}
            </button>
         </div>

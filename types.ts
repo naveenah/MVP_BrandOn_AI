@@ -36,6 +36,15 @@ export interface ScheduledPost {
   contentSummary: string;
 }
 
+export interface WixSite {
+  id: string;
+  name: string;
+  url: string;
+  status: 'Live' | 'Preview' | 'Staging';
+  lastSync: string;
+  templateId: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -46,6 +55,13 @@ export interface Tenant {
   automationWorkflow?: {
     channels: AutomationChannel[];
     overallProgress: number;
+  };
+  wixIntegration?: {
+    enabled: boolean;
+    siteId?: string;
+    apiKey?: string;
+    autoSync: boolean;
+    sites: WixSite[];
   };
 }
 
@@ -68,6 +84,13 @@ export interface ProductServiceDetail {
   pricingModel: string;
   marketPosition: string;
   status: 'Beta' | 'Live' | 'Sunset';
+  usp: string;
+  competitors: string[];
+  useCases: string[];
+  techStack?: string;
+  documentationUrl?: string;
+  painPointsSolved: string;
+  launchDate?: string;
 }
 
 export interface OnboardingDraft {
@@ -82,11 +105,12 @@ export interface OnboardingDraft {
   brandVoice: string;
   mission: string;
   valueProps: string[];
-  services: string[]; // Legacy field
+  services: string[]; 
   offerings: ProductServiceDetail[];
   assets: OnboardingAsset[];
   currentStep: number;
   updatedAt: string;
+  wixAutomationEnabled: boolean;
 }
 
 export interface InfraStatus {
@@ -102,6 +126,7 @@ export enum AppRoute {
   DASHBOARD = '/',
   ONBOARDING = '/onboarding',
   EXPLORE = '/explore',
+  SITE_BUILDER = '/builder',
   SETTINGS = '/settings',
   PRICING = '/pricing'
 }

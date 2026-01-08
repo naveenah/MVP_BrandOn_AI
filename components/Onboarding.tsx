@@ -21,6 +21,8 @@ const ORG_TYPES = [
   'Sole proprietorship', 'Privately held', 'Partnership'
 ];
 
+type OfferingTab = 'Basic' | 'Marketing' | 'Strategic' | 'Operations';
+
 const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +34,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   const [deploymentStage, setDeploymentStage] = useState('');
   const [deploymentProgress, setDeploymentProgress] = useState(0);
   const [activeOfferingId, setActiveOfferingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<OfferingTab>('Basic');
   
   const [formData, setFormData] = useState<OnboardingDraft>({
     companyName: tenant.name,
@@ -49,20 +52,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     offerings: [],
     assets: [],
     currentStep: 1,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    wixAutomationEnabled: true
   });
 
-  const saveCurrentProgress = useCallback(async (dataOverride?: Partial<OnboardingDraft>, newStep?: number) => {
+  const saveCurrentProgress = useCallback(async (dataToSave: OnboardingDraft) => {
     setIsSaving(true);
-    const dataToSave = { 
-      ...formData, 
-      ...dataOverride, 
-      currentStep: newStep || step,
-      updatedAt: new Date().toISOString()
-    };
     await OnboardingService.saveOnboardingDraft(tenant.id, dataToSave);
     setTimeout(() => setIsSaving(false), 500);
-  }, [formData, step, tenant.id]);
+  }, [tenant.id]);
 
   useEffect(() => {
     const loadDraft = async () => {
@@ -81,7 +79,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
 
   const handleInputChange = (field: keyof OnboardingDraft, value: any) => {
     setFormData(prev => {
-      const updated = { ...prev, [field]: value };
+      const updated = { ...prev, [field]: value, updatedAt: new Date().toISOString() };
+      // Move async save outside of state setter callback
       OnboardingService.saveOnboardingDraft(tenant.id, updated);
       return updated;
     });
@@ -92,19 +91,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       alert("Please fill in all required fields marked with *");
       return;
     }
-    const next = Math.min(step + 1, 4);
+    const next = Math.min(step + 1, 5);
     setStep(next);
-    await saveCurrentProgress({}, next);
+    const updated = { ...formData, currentStep: next };
+    setFormData(updated);
+    await saveCurrentProgress(updated);
   };
 
   const prevStep = async () => {
     const prev = Math.max(step - 1, 1);
     setStep(prev);
-    await saveCurrentProgress({}, prev);
+    const updated = { ...formData, currentStep: prev };
+    setFormData(updated);
+    await saveCurrentProgress(updated);
   };
 
   const handleSaveAndClose = async () => {
-    await saveCurrentProgress();
+    await saveCurrentProgress(formData);
     navigate('/');
   };
 
@@ -130,11 +133,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
           keyFeatures: [''],
           pricingModel: '',
           marketPosition: '',
-          status: 'Beta'
+          status: 'Beta',
+          usp: '',
+          competitors: [''],
+          useCases: [''],
+          techStack: '',
+          documentationUrl: '',
+          painPointsSolved: '',
+          launchDate: ''
       };
       const updated = [...formData.offerings, newOffering];
       handleInputChange('offerings', updated);
       setActiveOfferingId(newOffering.id);
+      setActiveTab('Basic');
   };
 
   const handleUpdateOffering = (id: string, updates: Partial<ProductServiceDetail>) => {
@@ -143,6 +154,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
   };
 
   const handleDeleteOffering = (id: string) => {
+      if (!confirm('Are you sure you want to remove this offering?')) return;
       const updated = formData.offerings.filter(o => o.id !== id);
       handleInputChange('offerings', updated);
       if (activeOfferingId === id) {
@@ -161,7 +173,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     const file = files[0];
     
     const newAssetPlaceholder: OnboardingAsset = {
-      id: Math.random().toString(),
+      id: Math.random().toString(36).substr(2, 9),
       fileName: file.name,
       mimeType: file.type,
       publicUrl: '',
@@ -200,14 +212,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     }
 
     setIsDeploying(true);
-    await saveCurrentProgress();
+    await saveCurrentProgress(formData);
 
     const stages = [
       'Provisioning Isolated Database Context...',
       'Mapping Neural Vectors to Enterprise Assets...',
       'Syncing to Google File Search RAG Store...',
-      'Analyzing Product/Service Portfolio...',
-      'Finalizing API Handlers...',
+      'Synthesizing Wix REST API Digital Twin...',
+      'Configuring Velo Headless Handlers...',
       'Activating Action Engine & Brand Hub...'
     ];
 
@@ -249,13 +261,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
     { title: 'Identity', desc: 'Core' },
     { title: 'Strategy', desc: 'Map' },
     { title: 'Offerings', desc: 'Portfolio' },
+    { title: 'Presence', desc: 'Wix Twin' },
     { title: 'Asset Hub', desc: 'Media' }
   ];
 
   const activeOffering = formData.offerings.find(o => o.id === activeOfferingId);
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 relative">
+    <div className="max-w-6xl mx-auto py-8 px-4 relative">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -326,7 +339,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
       </div>
 
       <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-        <div className="p-10 sm:p-14 min-h-[600px]">
+        <div className="p-10 sm:p-14 min-h-[650px]">
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div className="border-b border-slate-100 pb-6 mb-6">
@@ -404,38 +417,41 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
 
           {step === 3 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left h-full flex flex-col">
-              <div className="border-b border-slate-100 pb-6">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Offerings Portfolio</h2>
-                <p className="text-slate-500 font-medium mt-2">Detail the specific products and services your brand provides to train AI depth.</p>
+              <div className="border-b border-slate-100 pb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">Offerings Portfolio</h2>
+                  <p className="text-slate-500 font-medium mt-2">Detail products and services to ground AI in your corporate context.</p>
+                </div>
+                <button onClick={handleAddOffering} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2">
+                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" /></svg>
+                   New Offering
+                </button>
               </div>
               
-              <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-[400px]">
+              <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-[500px]">
                 {/* List View */}
-                <div className="w-full md:w-64 flex flex-col gap-3">
-                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Your Offerings</span>
-                     <button onClick={handleAddOffering} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                     </button>
-                   </div>
-                   <div className="space-y-2 max-h-[400px] overflow-y-auto no-scrollbar">
+                <div className="w-full md:w-72 flex flex-col gap-3">
+                   <div className="space-y-2 max-h-[500px] overflow-y-auto no-scrollbar">
                      {formData.offerings.length === 0 ? (
-                       <p className="text-xs text-slate-400 font-bold text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">No offerings added.</p>
+                       <p className="text-xs text-slate-400 font-bold text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">Click "New Offering" to begin.</p>
                      ) : (
                        formData.offerings.map(off => (
                          <button 
                            key={off.id}
-                           onClick={() => setActiveOfferingId(off.id)}
-                           className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all flex items-center justify-between group ${
-                             activeOfferingId === off.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-50 bg-white hover:border-slate-200'
+                           onClick={() => { setActiveOfferingId(off.id); setActiveTab('Basic'); }}
+                           className={`w-full text-left px-5 py-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${
+                             activeOfferingId === off.id ? 'border-indigo-600 bg-indigo-50 shadow-lg shadow-indigo-50' : 'border-slate-50 bg-white hover:border-slate-200 shadow-sm'
                            }`}
                          >
                            <div className="overflow-hidden">
-                             <p className={`text-xs font-black truncate ${activeOfferingId === off.id ? 'text-indigo-900' : 'text-slate-900'}`}>{off.name || 'Untitled'}</p>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{off.type}</p>
+                             <p className={`text-[13px] font-black truncate ${activeOfferingId === off.id ? 'text-indigo-900' : 'text-slate-900'}`}>{off.name || 'Untitled Offering'}</p>
+                             <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{off.type}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${off.status === 'Live' ? 'bg-emerald-500' : off.status === 'Beta' ? 'bg-amber-500' : 'bg-slate-300'}`}></span>
+                             </div>
                            </div>
-                           <button onClick={(e) => { e.stopPropagation(); handleDeleteOffering(off.id); }} className="p-1 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all">
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           <button onClick={(e) => { e.stopPropagation(); handleDeleteOffering(off.id); }} className="p-2 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all rounded-lg">
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                            </button>
                          </button>
                        ))
@@ -443,82 +459,50 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
                    </div>
                 </div>
 
-                {/* Detail Form */}
-                <div className="flex-1 bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100 overflow-y-auto max-h-[500px] no-scrollbar">
+                <div className="flex-1 bg-[#fcfcfd] rounded-[2.5rem] border border-slate-100 flex flex-col overflow-hidden shadow-inner">
                    {activeOffering ? (
-                     <div className="space-y-6 animate-in fade-in duration-300">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Offering Name</label>
-                             <input type="text" value={activeOffering.name} onChange={(e) => handleUpdateOffering(activeOffering.id, { name: e.target.value })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
-                           </div>
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</label>
-                             <select value={activeOffering.type} onChange={(e) => handleUpdateOffering(activeOffering.id, { type: e.target.value as any })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900">
-                               <option value="Product">Product</option>
-                               <option value="Service">Service</option>
-                             </select>
-                           </div>
+                     <div className="flex flex-col h-full animate-in fade-in duration-300">
+                        <div className="flex items-center gap-6 px-8 border-b border-slate-200 bg-white/50 pt-2">
+                           {(['Basic', 'Marketing', 'Strategic', 'Operations'] as OfferingTab[]).map(t => (
+                             <button 
+                               key={t}
+                               onClick={() => setActiveTab(t)}
+                               className={`pb-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
+                                 activeTab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                               }`}
+                             >
+                               {t}
+                             </button>
+                           ))}
                         </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Description</label>
-                          <textarea rows={3} value={activeOffering.description} onChange={(e) => handleUpdateOffering(activeOffering.id, { description: e.target.value })} placeholder="Detailed explanation of what this offering does..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-medium text-slate-900" />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Audience</label>
-                             <input type="text" value={activeOffering.targetAudience} onChange={(e) => handleUpdateOffering(activeOffering.id, { targetAudience: e.target.value })} placeholder="e.g. CTOs at mid-market firms" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
-                           </div>
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Model</label>
-                             <input type="text" value={activeOffering.pricingModel} onChange={(e) => handleUpdateOffering(activeOffering.id, { pricingModel: e.target.value })} placeholder="e.g. SaaS Subscription, One-time Fee" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Market Position</label>
-                             <input type="text" value={activeOffering.marketPosition} onChange={(e) => handleUpdateOffering(activeOffering.id, { marketPosition: e.target.value })} placeholder="e.g. Premium / Mid-Tier / Disruptor" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
-                           </div>
-                           <div className="space-y-1.5">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lifecycle Status</label>
-                             <select value={activeOffering.status} onChange={(e) => handleUpdateOffering(activeOffering.id, { status: e.target.value as any })} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900">
-                               <option value="Beta">Beta / R&D</option>
-                               <option value="Live">Live / Active</option>
-                               <option value="Sunset">Legacy / Sunset</option>
-                             </select>
-                           </div>
-                        </div>
-
-                        <div className="space-y-3">
-                           <div className="flex items-center justify-between">
-                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Features / Pillars</label>
-                             <button onClick={() => handleUpdateOffering(activeOffering.id, { keyFeatures: [...activeOffering.keyFeatures, ''] })} className="text-[10px] font-black text-indigo-600 hover:underline">+ Add Feature</button>
-                           </div>
-                           <div className="space-y-2">
-                             {activeOffering.keyFeatures.map((feat, idx) => (
-                               <input 
-                                 key={idx} 
-                                 type="text" 
-                                 value={feat} 
-                                 onChange={(e) => {
-                                   const updated = [...activeOffering.keyFeatures];
-                                   updated[idx] = e.target.value;
-                                   handleUpdateOffering(activeOffering.id, { keyFeatures: updated });
-                                 }}
-                                 placeholder={`Feature 0${idx + 1}`}
-                                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:border-indigo-600 outline-none text-xs font-bold" 
-                               />
-                             ))}
-                           </div>
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+                           {activeTab === 'Basic' && (
+                             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                   <div className="space-y-1.5">
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Full Name</label>
+                                     <input type="text" value={activeOffering.name} onChange={(e) => handleUpdateOffering(activeOffering.id, { name: e.target.value })} className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900" />
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</label>
+                                     <select value={activeOffering.type} onChange={(e) => handleUpdateOffering(activeOffering.id, { type: e.target.value as any })} className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold text-slate-900">
+                                       <option value="Product">Product</option>
+                                       <option value="Service">Service</option>
+                                     </select>
+                                   </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Description</label>
+                                  <textarea rows={4} value={activeOffering.description} onChange={(e) => handleUpdateOffering(activeOffering.id, { description: e.target.value })} className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-medium text-slate-900" />
+                                </div>
+                             </div>
+                           )}
                         </div>
                      </div>
                    ) : (
-                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40 py-20">
-                        <svg className="w-16 h-16 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                        <p className="text-sm font-black text-slate-900">Select an offering to configure its details.</p>
+                     <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-40">
+                        <p className="text-sm font-black text-slate-900">Select an offering to detail specs.</p>
                      </div>
                    )}
                 </div>
@@ -529,53 +513,80 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
           {step === 4 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
               <div className="text-center space-y-4">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Digital Presence Engine</h2>
+                <p className="text-slate-500 font-medium max-w-lg mx-auto">Initialize your brand's digital presence via programmatic Wix REST APIs.</p>
+              </div>
+              <div className="max-w-2xl mx-auto space-y-8">
+                 <div className={`p-8 rounded-[2.5rem] border-2 transition-all ${formData.wixAutomationEnabled ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center justify-between mb-6">
+                       <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg text-indigo-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                          </div>
+                          <div>
+                            <h3 className="font-black text-slate-900">Automate Wix Digital Twin</h3>
+                            <p className="text-xs font-bold text-slate-500">Programmatically clone and sync brand data.</p>
+                          </div>
+                       </div>
+                       <div className={`w-14 h-7 rounded-full p-1 cursor-pointer transition-colors ${formData.wixAutomationEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`} onClick={() => handleInputChange('wixAutomationEnabled', !formData.wixAutomationEnabled)}>
+                         <div className={`w-5 h-5 bg-white rounded-full transition-transform ${formData.wixAutomationEnabled ? 'translate-x-7' : ''}`}></div>
+                       </div>
+                    </div>
+                    <ul className="space-y-3">
+                       {['REST API Site Cloning', 'Bulk CMS Sync', 'Headless Velo Config'].map((item, i) => (
+                         <li key={i} className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                            <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                            {item}
+                         </li>
+                       ))}
+                    </ul>
+                 </div>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 text-left">
+              <div className="text-center space-y-4">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">Advanced Media Hub</h2>
-                <p className="text-slate-500 font-medium max-w-lg mx-auto">Upload strategic documents to ground the AI in your specific corporate context.</p>
+                <p className="text-slate-500 font-medium max-w-lg mx-auto">Upload and manage strategic documents to ground AI context.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div 
-                  onClick={() => fileInputRef.current?.click()} 
-                  className="group h-64 bg-slate-50 border-4 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all overflow-hidden"
-                >
+                <div onClick={() => fileInputRef.current?.click()} className="group h-64 bg-slate-50 border-4 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all overflow-hidden">
                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 shadow-lg mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
                   </div>
                   <span className="text-lg font-black text-slate-900">Link Asset</span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Click to select files</span>
+                  <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">PDF, Images, or Video</p>
                 </div>
-                <div className="space-y-4 h-64 overflow-y-auto no-scrollbar pr-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-white pb-2">Sync Queue</label>
+                
+                <div className="space-y-4 h-64 overflow-y-auto no-scrollbar pr-2 flex flex-col">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-white pb-2 z-10">Linked Enterprise Knowledge</label>
                   {formData.assets.length === 0 ? (
-                    <div className="text-center py-12 bg-slate-50 rounded-[2rem] border-2 border-slate-100 border-dashed">
-                      <p className="text-slate-400 text-xs font-bold">No assets linked.</p>
+                    <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-3xl opacity-40">
+                       <p className="text-slate-400 text-xs font-bold">No assets linked yet.</p>
                     </div>
                   ) : (
-                    formData.assets.map((asset) => (
-                      <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-right-4 group">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                          {asset.status === 'Synced' ? (
-                            <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                          ) : (
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" /></svg>
-                          )}
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <p className="text-sm font-black text-slate-900 truncate mb-1">{asset.fileName}</p>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full transition-all duration-300 ${asset.status === 'Synced' ? 'bg-emerald-500' : 'bg-indigo-600'}`} style={{ width: `${asset.progress}%` }}></div>
+                    <div className="space-y-3">
+                      {formData.assets.map((asset) => (
+                        <div key={asset.id} className="p-5 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 group transition-all hover:border-indigo-100 hover:shadow-sm">
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                           </div>
+                          <div className="flex-1 overflow-hidden">
+                            <p className="text-sm font-black text-slate-900 truncate">{asset.fileName}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{asset.status}</p>
+                          </div>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset.id); }} 
+                            className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                            title="Remove Asset"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
                         </div>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset.id); }}
-                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Remove Asset"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -584,16 +595,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ tenant, onComplete }) => {
         </div>
 
         <div className="p-10 bg-[#fafafa] border-t border-slate-100 flex items-center justify-between">
-          <button onClick={prevStep} disabled={step === 1 || isDeploying} className="px-8 py-4 text-sm font-black text-slate-400 hover:text-slate-900 disabled:opacity-20 transition-all uppercase tracking-widest">Back</button>
-          <button 
-            onClick={step === 4 ? handleFinalize : nextStep} 
-            disabled={isDeploying || (step === 4 && !formData.isAuthorized)} 
-            className={`px-14 py-5 rounded-[1.8rem] text-[16px] font-black shadow-2xl transition-all active:scale-95 tracking-tight ${
-              step === 4 ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            {step === 4 ? 'Initialize Deployment' : 'Save & Continue'}
-          </button>
+          <button onClick={prevStep} disabled={step === 1 || isDeploying} className="px-8 py-4 text-sm font-black text-slate-400 hover:text-slate-900 disabled:opacity-20 uppercase tracking-widest">Back</button>
+          <button onClick={step === 5 ? handleFinalize : nextStep} disabled={isDeploying || (step === 5 && !formData.isAuthorized)} className={`px-14 py-5 rounded-[1.8rem] text-[16px] font-black shadow-2xl transition-all active:scale-95 ${step === 5 ? 'bg-slate-900 text-white' : 'bg-indigo-600 text-white'}`}>{step === 5 ? 'Initialize Deployment' : 'Save & Continue'}</button>
         </div>
       </div>
     </div>

@@ -16,11 +16,17 @@ const buildEnterpriseContext = async (tenantId: string): Promise<string> => {
 
   const offeringsText = draft.offerings?.map((o, i) => `
 Offering #${i + 1}: ${o.name} (${o.type})
-- Status: ${o.status}
+- Status: ${o.status} | Launched: ${o.launchDate || 'N/A'}
 - Market Position: ${o.marketPosition}
 - Target Audience: ${o.targetAudience}
+- USP: ${o.usp}
+- Pain Points Solved: ${o.painPointsSolved}
+- Use Cases: ${o.useCases.join(', ')}
+- Competitors: ${o.competitors.join(', ')}
 - Pricing Model: ${o.pricingModel}
-- Description: ${o.description}
+- Tech Stack: ${o.techStack || 'N/A'}
+- Docs: ${o.documentationUrl || 'N/A'}
+- Detailed Description: ${o.description}
 - Key Features: ${o.keyFeatures.join(', ')}
 `).join('\n') || "No detailed offerings provided.";
 
@@ -39,7 +45,7 @@ Core Brand Voice: ${draft.brandVoice}
 Strategic Value Propositions:
 ${draft.valueProps.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
-Product & Service Portfolio:
+Product & Service Portfolio (Detailed Specs):
 ${offeringsText}
 
 Internal Assets Synced: ${draft.assets.length} items.
@@ -72,10 +78,10 @@ You are the Enterprise Brand Assistant for ${tenantName}.
 Your core intelligence is grounded in the provided Enterprise Knowledge Base.
 
 Follow these rules:
-1. Always refer to the internal Knowledge Base first for facts about the company and its specific products/services.
-2. If data is missing from the Knowledge Base, use Google Search grounding to verify the company's public presence.
-3. Maintain the company's specified brand voice in all responses.
-4. If asked about the brand's strategy or specific product details, align your answer with the Portfolio and Value Propositions provided.
+1. Refer to the internal Knowledge Base for facts about company products/services.
+2. Use the detailed Specs (USPs, Pain Points, Use Cases) to answer strategic questions.
+3. If data is missing, use Google Search grounding for public verification.
+4. Maintain specified brand voice.
 
 ${enterpriseContext}
 `

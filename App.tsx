@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Onboarding from './components/Onboarding';
 import Explore from './components/Explore';
+import SiteBuilder from './components/SiteBuilder';
 import Pricing from './components/Pricing';
 import Settings from './components/Settings';
 import { DB } from './services/db';
@@ -31,7 +32,6 @@ const App: React.FC = () => {
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
 
-  // Sync state from DB on tenant updates
   useEffect(() => {
     const handleTenantUpdate = async () => {
       const savedTenants = await DB.get<Tenant[]>(DB.keys.TENANTS);
@@ -47,7 +47,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('tenantUpdated', handleTenantUpdate);
   }, []);
 
-  // Initial load logic: Prioritize persistent data over mocks
   useEffect(() => {
     const loadState = async () => {
       const savedUser = localStorage.getItem('user');
@@ -62,7 +61,6 @@ const App: React.FC = () => {
           const tenantToSet = savedTenants.find((t: Tenant) => t.id === savedCurrentTenantId) || savedTenants[0];
           setCurrentTenant(tenantToSet);
         } else {
-          // Only create mocks if no data exists
           const mockTenants: Tenant[] = [
             { id: 't1', name: 'Acme Global', logo: 'https://picsum.photos/40/40?random=1', plan: 'Enterprise', status: 'Active', subscription: { id: 'sub_1', tenantId: 't1', stripeCustomerId: 'cus_acme_123', status: 'active', tier: 'Enterprise' } },
             { id: 't2', name: 'StartUp Inc', logo: 'https://picsum.photos/40/40?random=2', plan: 'Basic', status: 'Onboarding' }
@@ -80,7 +78,6 @@ const App: React.FC = () => {
     setUser(newUser);
     localStorage.setItem('user', JSON.stringify(newUser));
     
-    // Check if tenants exist before resetting to defaults
     const savedTenants = await DB.get<Tenant[]>(DB.keys.TENANTS);
     if (!savedTenants || savedTenants.length === 0) {
       const defaultTenants: Tenant[] = [
@@ -164,6 +161,7 @@ const App: React.FC = () => {
 
   const GatedExplore = withSubscription(Explore);
   const GatedDashboard = withSubscription(Dashboard);
+  const GatedSiteBuilder = withSubscription(SiteBuilder);
 
   return (
     <HashRouter>
@@ -188,6 +186,7 @@ const App: React.FC = () => {
                   <Route path="/" element={<GatedDashboard tenant={currentTenant!} />} />
                   <Route path="/onboarding" element={<Onboarding tenant={currentTenant!} onComplete={async (id) => await updateTenantStatus(id, 'Active')} />} />
                   <Route path="/explore" element={<GatedExplore tenant={currentTenant!} />} />
+                  <Route path="/builder" element={<GatedSiteBuilder tenant={currentTenant!} />} />
                   <Route path="/pricing" element={<Pricing tenant={currentTenant!} onSubscriptionUpdate={handleSubscriptionUpdate} />} />
                   <Route path="/settings" element={<Settings tenant={currentTenant!} onUpdateTenant={handleUpdateTenant} />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
