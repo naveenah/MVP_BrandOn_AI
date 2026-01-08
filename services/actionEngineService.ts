@@ -5,15 +5,16 @@ import { DB } from './db';
 import * as OnboardingService from './onboardingService';
 
 const CHANNELS: ChannelType[] = ['LinkedIn', 'X', 'Google Business', 'YouTube', 'Medium', 'Shopify'];
-const API_KEY = process.env.API_KEY || "";
 
 export const synthesizeAIPipeline = async (tenantId: string): Promise<ScheduledPost[]> => {
-  if (!API_KEY) return generateStaticFallback(tenantId);
+  // Fix: Use process.env.API_KEY directly for initialization as per guidelines
+  if (!process.env.API_KEY) return generateStaticFallback(tenantId);
 
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
   if (!draft) return generateStaticFallback(tenantId);
 
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // Fix: Create instance right before call
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `Synthesize a 1-week strategic content pipeline for ${draft.companyName} (${draft.industry}). Mission: ${draft.mission}. Voice: ${draft.brandVoice}. Return exactly 4 posts.`;
 
   try {
@@ -52,9 +53,12 @@ export const synthesizeAIPipeline = async (tenantId: string): Promise<ScheduledP
 };
 
 export const generateBrandIntelligenceReport = async (tenantId: string): Promise<string> => {
-  if (!API_KEY) return "AI Configuration Missing.";
+  // Fix: Use process.env.API_KEY directly
+  if (!process.env.API_KEY) return "AI Configuration Missing.";
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  
+  // Fix: Create instance right before use
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `Generate a high-level "Enterprise Intelligence Report" for ${draft?.companyName || 'the organization'}. 1. Summary, 2. Strategy, 3. Future Opportunities.`;
   try {

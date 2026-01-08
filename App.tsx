@@ -27,6 +27,11 @@ const withSubscription = (Component: React.ComponentType<any>, requiredTier?: 'P
   };
 };
 
+// Define gated components outside to prevent unmounting on parent re-renders
+const GatedExplore = withSubscription(Explore);
+const GatedDashboard = withSubscription(Dashboard);
+const GatedSiteBuilder = withSubscription(SiteBuilder);
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
@@ -158,10 +163,6 @@ const App: React.FC = () => {
       localStorage.setItem('currentTenantId', t.id);
     }
   };
-
-  const GatedExplore = withSubscription(Explore);
-  const GatedDashboard = withSubscription(Dashboard);
-  const GatedSiteBuilder = withSubscription(SiteBuilder);
 
   return (
     <HashRouter>

@@ -19,11 +19,13 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   
+  // Fix: Ensure 'sites' property is included in the initial state to satisfy the Tenant interface requirements
   const [wixConfig, setWixConfig] = useState(tenant.wixIntegration || {
     enabled: false,
     siteId: '',
     apiKey: '',
-    autoSync: false
+    autoSync: false,
+    sites: []
   });
 
   useEffect(() => {

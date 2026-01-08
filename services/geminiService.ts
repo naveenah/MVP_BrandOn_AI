@@ -3,8 +3,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { DB } from './db';
 import * as OnboardingService from './onboardingService';
 
-const API_KEY = process.env.API_KEY || "";
-
 /**
  * Compiles a dense enterprise knowledge base from the onboarding draft.
  * This simulates a RAG file search by providing structured enterprise data
@@ -58,10 +56,12 @@ export const getBrandAssistantResponse = async (
   tenantId: string,
   tenantName: string
 ) => {
-  if (!API_KEY) return { text: "API Key not configured.", citations: [] };
+  // Fix: Directly use process.env.API_KEY for initialization as per guidelines
+  if (!process.env.API_KEY) return { text: "API Key not configured.", citations: [] };
 
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    // Fix: Create instance right before API call to ensure current credentials
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const history = await DB.get<any[]>(DB.keys.CHATS(tenantId)) || [];
     const enterpriseContext = await buildEnterpriseContext(tenantId);
     
@@ -113,9 +113,11 @@ ${enterpriseContext}
  * Generates a brand-aligned logo using gemini-2.5-flash-image (nano banana).
  */
 export const generateLogo = async (tenantId: string) => {
-  if (!API_KEY) throw new Error("API Key not configured.");
+  // Fix: Directly use process.env.API_KEY
+  if (!process.env.API_KEY) throw new Error("API Key not configured.");
   
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // Fix: Initialize instance inside the call scope
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const draft = await OnboardingService.getOnboardingDraft(tenantId);
   if (!draft) throw new Error("Onboarding context missing.");
 
@@ -147,7 +149,9 @@ Design Constraints:
       }
     });
 
-    for (const part of response.candidates[0].content.parts) {
+    // Fix: Iterate through candidates and parts to find the image part as per guidelines
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
       if (part.inlineData) {
         return `data:image/png;base64,${part.inlineData.data}`;
       }

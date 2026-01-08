@@ -36,6 +36,19 @@ export interface ScheduledPost {
   contentSummary: string;
 }
 
+export interface SiteSection {
+  id: string;
+  type: string;
+  attributes: Record<string, any>;
+}
+
+export interface SitePage {
+  id: string;
+  name: string;
+  path: string;
+  sections: SiteSection[];
+}
+
 export interface WixSite {
   id: string;
   name: string;
@@ -43,6 +56,7 @@ export interface WixSite {
   status: 'Live' | 'Preview' | 'Staging';
   lastSync: string;
   templateId: string;
+  pages: SitePage[];
 }
 
 export interface Tenant {

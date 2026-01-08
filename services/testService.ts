@@ -2,8 +2,6 @@
 import { DB } from './db';
 import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.API_KEY || "";
-
 export interface TestResult {
   id: string;
   name: string;
@@ -33,11 +31,13 @@ export const runDiagnostics = async (tenantId: string): Promise<TestResult[]> =>
   }
 
   // 2. Test: Gemini API Connectivity
-  if (!API_KEY) {
+  // Fix: Strictly use process.env.API_KEY for check and initialization
+  if (!process.env.API_KEY) {
     results.push({ id: 'ai-1', name: 'Gemini Connectivity', status: 'Failed', message: 'API Key is missing from environment.' });
   } else {
     try {
-      const ai = new GoogleGenAI({ apiKey: API_KEY });
+      // Fix: Always create new instance right before the handshake call
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [{ parts: [{ text: 'Respond with "pong"' }] }]
