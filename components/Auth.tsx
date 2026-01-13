@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
+import { DB } from '../services/db';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -14,6 +15,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup }) => {
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +40,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup }) => {
       }
       setIsLoading(false);
     }, 800);
+  };
+
+  const handleSystemReset = async () => {
+    if (!window.confirm("Perform a full system restart? This will purge all tenant data, websites, and settings.")) return;
+    setIsResetting(true);
+    await DB.clearAll();
+    window.location.reload();
   };
 
   const handleGoogleAuth = () => {
@@ -202,7 +211,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup }) => {
               </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 space-y-4">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
@@ -211,6 +220,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup }) => {
               >
                 <GoogleIcon />
                 Sign in with Google
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleSystemReset}
+                disabled={isResetting}
+                className="w-full flex items-center justify-center py-3 px-4 border-2 border-dashed border-rose-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-400 hover:bg-rose-50 hover:border-rose-200 transition-all disabled:opacity-50"
+              >
+                {isResetting ? 'Purging Context...' : 'System Restart (Reset All)'}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import * as BillingService from '../services/billingService';
 import { getInfraStatus, ApiClient } from '../services/apiClient';
 import { runDiagnostics, TestResult } from '../services/testService';
+import { DB } from '../services/db';
 
 interface SettingsProps {
   tenant: Tenant;
@@ -18,8 +19,8 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
   const [infra, setInfra] = useState(getInfraStatus());
   const [isTesting, setIsTesting] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [isResetting, setIsResetting] = useState(false);
   
-  // Fix: Ensure 'sites' property is included in the initial state to satisfy the Tenant interface requirements
   const [wixConfig, setWixConfig] = useState(tenant.wixIntegration || {
     enabled: false,
     siteId: '',
@@ -40,6 +41,15 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
     const results = await runDiagnostics(tenant.id);
     setTestResults(results);
     setIsTesting(false);
+  };
+
+  const handleFactoryReset = async () => {
+    if (!window.confirm("WARNING: This will permanently delete all tenants, brand context, websites, and chat history. This action cannot be undone. Proceed with system restart?")) {
+      return;
+    }
+    setIsResetting(true);
+    await DB.clearAll();
+    window.location.href = '/'; // Redirect to root to trigger fresh init
   };
 
   const handleOpenBillingPortal = async () => {
@@ -224,6 +234,27 @@ const Settings: React.FC<SettingsProps> = ({ tenant, onUpdateTenant }) => {
         <div className="pt-6 border-t border-slate-100 flex justify-end">
            <button onClick={handleSaveConfig} disabled={isSaving || (workspaceName === tenant.name && JSON.stringify(wixConfig) === JSON.stringify(tenant.wixIntegration))} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all disabled:opacity-50">
              {isSaving ? 'Syncing...' : 'Save Context'}
+           </button>
+        </div>
+      </section>
+
+      {/* Danger Zone */}
+      <section className="bg-rose-50 rounded-[2.5rem] p-10 shadow-xl border border-rose-100 space-y-6">
+        <div>
+          <h2 className="text-2xl font-black text-rose-900 tracking-tight">Danger Zone</h2>
+          <p className="text-rose-600 font-medium mt-1">Irreversible administrative actions for system maintenance.</p>
+        </div>
+        <div className="p-8 bg-white rounded-3xl border border-rose-200 flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div className="space-y-1">
+             <p className="font-black text-slate-900">Restart Application (Factory Reset)</p>
+             <p className="text-sm text-slate-500 font-medium">Clear all persistent state, database context, and re-initialize from zero.</p>
+           </div>
+           <button 
+             onClick={handleFactoryReset}
+             disabled={isResetting}
+             className="px-8 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-100 flex items-center gap-2"
+           >
+             {isResetting ? 'Purging State...' : 'Reset System'}
            </button>
         </div>
       </section>

@@ -24,6 +24,28 @@ export class DB {
     localStorage.removeItem(key);
   }
 
+  /**
+   * Performs a complete purge of all BrandOS related data from local storage.
+   */
+  static async clearAll(): Promise<void> {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      // Clear specific known keys and prefix-matched keys
+      if (
+        key.startsWith('brandos_') || 
+        key === 'user' || 
+        key === 'currentTenantId' || 
+        key === 'tenants' ||
+        key === 'jwt_simulated'
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
+    // Fallback: Clear everything if preferred for a "True Restart"
+    // localStorage.clear();
+    await this.delay(200);
+  }
+
   // Tenant-scoped keys
   static keys = {
     USER: 'brandos_user',
